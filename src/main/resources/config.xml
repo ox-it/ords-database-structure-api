@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This is the meta-configuration file - its used to lookup the location of configuration files in deployment -->
+<configuration>
+	<!-- ServerConfig.xml -->
+	<serverConfigurationLocation>/etc/ordsConfig/serverConfig.xml</serverConfigurationLocation>
+	<!-- 
+		Hibernate. Note when using shared location, each hibernate file must have a different name
+		as they contain different persistent class mappings for each API provider.
+	 -->
+	<hibernate>hibernate.cfg.xml</hibernate>
+	<hibernateUserDBs>hibernateUserDBs.cfb.xml</hibernateUserDBs>
+	<databaseProperties>database.properties</databaseProperties>
+</configuration>
