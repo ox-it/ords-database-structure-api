@@ -18,6 +18,8 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 
 import java.util.ServiceLoader;
 
+import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.CommentServiceImpl;
+
 public interface CommentService {
 
 	// table comments
@@ -89,7 +91,7 @@ public interface CommentService {
 	    	// If no service provider is found, use the default
 	    	//
 	    	if (provider == null){
-	// TODO    		provider = new CommentServiceImpl();
+	    		provider = new CommentServiceImpl();
 	    	}
 	    	
 	    	return provider;
