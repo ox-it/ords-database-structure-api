@@ -29,7 +29,7 @@ public interface CommentService {
 	 * @return
 	 * @throws Exception
 	 */
-	public String getTableComment ( int dbId, String instance, String tableName ) throws Exception;
+	public String getTableComment ( int dbId, String instance, String tableName, boolean stagin ) throws Exception;
 	
 	/**
 	 * Sets the comment for a table
@@ -39,7 +39,7 @@ public interface CommentService {
 	 * @param comment
 	 * @throws Exception
 	 */
-	public void setTableComment ( int dbId, String instance, String tableName, String comment ) throws Exception;
+	public void setTableComment ( int dbId, String instance, String tableName, String comment, boolean stagin ) throws Exception;
 	
 	
 	// column comments
@@ -52,7 +52,7 @@ public interface CommentService {
 	 * @return
 	 * @throws Exception
 	 */
-	public String getColumnComment ( int dbId, String instance, String tableName, String columnName ) throws Exception;
+	public String getColumnComment ( int dbId, String instance, String tableName, String columnName, boolean stagin ) throws Exception;
 	
 	/**
 	 * Set the comment for a named column in a table
@@ -62,7 +62,7 @@ public interface CommentService {
 	 * @param columnName
 	 * @throws Exception
 	 */
-	public void setColumnComment ( int dbId, String instance, String tableName, String columnName, String comment ) throws Exception;
+	public void setColumnComment ( int dbId, String instance, String tableName, String columnName, String comment, boolean stagin ) throws Exception;
 	
 	
 	

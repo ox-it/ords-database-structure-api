@@ -26,11 +26,11 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-
 import uk.ac.ox.it.ords.api.database.structure.metadata.CommentRequest;
+import uk.ac.ox.it.ords.api.database.structure.resources.AbstractResource.BooleanCheck;
 import uk.ac.ox.it.ords.api.database.structure.services.CommentService;
 
-@Path("/database/{id}/{instance}/comment/{tablename}")
+@Path("/database/{id}/{instance}/comment/{tablename}/{staging}")
 public class Comment extends AbstractResource {
 	
 	@GET
@@ -38,7 +38,8 @@ public class Comment extends AbstractResource {
 	public Response getTableComment ( 
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
-			@PathParam("tablename") String tableName ) {
+			@PathParam("tablename") String tableName,
+			@PathParam("staging") BooleanCheck staging ) {
 		
 		if ( !canViewDatabase ( dbId ) ) {
 			return forbidden();
@@ -46,7 +47,7 @@ public class Comment extends AbstractResource {
 		try {
 			CommentRequest comment = new CommentRequest();
 			comment.setComment(
-					serviceInstance().getTableComment(dbId, instance, tableName));
+					serviceInstance().getTableComment(dbId, instance, tableName, staging.getValue()));
 			return Response.ok(comment).build();
 		}
 		catch ( Exception e ) {
@@ -63,13 +64,14 @@ public class Comment extends AbstractResource {
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
+			@PathParam("staging") BooleanCheck staging,
 			CommentRequest newComment ) {
 		
 		if ( !canModifyDatabase( dbId )) {
 			return forbidden();
 		}
 		try {
-			serviceInstance().setTableComment(dbId, instance, tableName, newComment.getComment());
+			serviceInstance().setTableComment(dbId, instance, tableName, newComment.getComment(), staging.getValue());
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -86,7 +88,8 @@ public class Comment extends AbstractResource {
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@PathParam("columnName") String columnName ) {
+			@PathParam("columnName") String columnName,
+			@PathParam("staging") BooleanCheck staging ) {
 		
 		if ( !canViewDatabase( dbId )) {
 			return forbidden();
@@ -94,7 +97,7 @@ public class Comment extends AbstractResource {
 		try {
 			CommentRequest comment = new CommentRequest();
 			comment.setComment(
-					serviceInstance().getColumnComment(dbId, instance, tableName, columnName));
+					serviceInstance().getColumnComment(dbId, instance, tableName, columnName, staging.getValue()));
 			return Response.ok(comment).build();
 		}
 		catch ( Exception e ) {
@@ -112,7 +115,8 @@ public class Comment extends AbstractResource {
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@PathParam("columnName") String columnName, 
+			@PathParam("columnName") String columnName,
+			@PathParam("staging") BooleanCheck staging, 
 			CommentRequest newComment ) {
 		
 		if ( !canModifyDatabase ( dbId ) ) {
@@ -124,7 +128,8 @@ public class Comment extends AbstractResource {
 					instance,
 					tableName,
 					columnName,
-					newComment.getComment());
+					newComment.getComment(), 
+					staging.getValue());
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
