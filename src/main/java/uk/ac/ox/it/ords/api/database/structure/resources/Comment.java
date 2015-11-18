@@ -27,7 +27,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import uk.ac.ox.it.ords.api.database.structure.metadata.CommentRequest;
-import uk.ac.ox.it.ords.api.database.structure.resources.AbstractResource.BooleanCheck;
 import uk.ac.ox.it.ords.api.database.structure.services.CommentService;
 
 @Path("/database/{id}/{instance}/comment/{tablename}/{staging}")

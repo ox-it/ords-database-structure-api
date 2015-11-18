@@ -29,6 +29,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.shiro.SecurityUtils;
 
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
@@ -180,6 +181,18 @@ public class Database extends AbstractResource{
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
 		}
 		
+	}
+	
+	@POST
+	@Path("{id}/{instance}/data")
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	public Response handleFileUpload ( @PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			List<Attachment> attachments) {
+		if (!canModifyDatabase(dbId)) {
+			return forbidden();		
+		}
+		return Response.ok().build();
 	}
 	
 	

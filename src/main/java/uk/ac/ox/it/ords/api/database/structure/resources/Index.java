@@ -29,8 +29,9 @@ import javax.ws.rs.core.Response;
 
 import uk.ac.ox.it.ords.api.database.structure.metadata.IndexRequest;
 import uk.ac.ox.it.ords.api.database.structure.services.IndexService;
+import uk.ac.ox.it.ords.api.database.structure.services.MessageEntity;
 
-@Path("/database/{id}/{instance}/table/{tablename}/index/{indexname}")
+@Path("/database/{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
 public class Index extends AbstractResource {
 
 	@GET
@@ -39,13 +40,15 @@ public class Index extends AbstractResource {
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@PathParam("indexname") String indexName ) {
+			@PathParam("indexname") String indexName,
+			@PathParam("staging") BooleanCheck staging ) {
 		
 		if (!canViewDatabase(dbId)){
 			return forbidden();
 		}
 		try {
-			IndexRequest index = serviceInstance().getIndex(dbId, instance, tableName, indexName);
+			MessageEntity index = serviceInstance().getIndex(dbId, instance, tableName, indexName,
+					staging.getValue());
 			return Response.ok(index).build();
 		}
 		catch ( Exception e ) {
@@ -62,13 +65,15 @@ public class Index extends AbstractResource {
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("indexname") String indexName,
+			@PathParam("staging") BooleanCheck staging,
 			IndexRequest newIndex ) {
 		
 		if(!canModifyDatabase(dbId)) {
 			return forbidden();
 		}
 		try {
-			serviceInstance().createIndex(dbId, instance, tableName, newIndex);
+			serviceInstance().createIndex(dbId, instance, tableName, indexName, newIndex,
+					staging.getValue());
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -84,12 +89,14 @@ public class Index extends AbstractResource {
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("indexname") String indexName,
+			@PathParam("staging") BooleanCheck staging,
 			IndexRequest newIndex ) {
 		if(!canModifyDatabase(dbId)){
 			return forbidden();
 		}
 		try {
-			serviceInstance().updateIndex(dbId, instance, tableName, indexName, newIndex);
+			serviceInstance().updateIndex(dbId, instance, tableName, indexName, newIndex,
+					staging.getValue());
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -104,13 +111,15 @@ public class Index extends AbstractResource {
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@PathParam("indexname") String indexName) {
+			@PathParam("indexname") String indexName,
+			@PathParam("staging") BooleanCheck staging) {
 		
 		if(!canModifyDatabase(dbId)){
 			forbidden();
 		}
 		try {
-			serviceInstance().deleteIndex(dbId, instance, tableName, indexName);
+			serviceInstance().deleteIndex(dbId, instance, tableName, indexName,
+					staging.getValue());
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {

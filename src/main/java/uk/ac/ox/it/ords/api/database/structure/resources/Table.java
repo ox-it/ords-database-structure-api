@@ -26,7 +26,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import uk.ac.ox.it.ords.api.database.structure.resources.AbstractResource.BooleanCheck;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.api.database.structure.services.TableStructureService;
 import uk.ac.ox.it.ords.api.database.structure.metadata.TableRenameRequest;

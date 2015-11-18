@@ -29,10 +29,11 @@ import javax.ws.rs.core.Response;
 
 import uk.ac.ox.it.ords.api.database.structure.metadata.ConstraintRequest;
 import uk.ac.ox.it.ords.api.database.structure.services.ConstraintService;
+import uk.ac.ox.it.ords.api.database.structure.services.MessageEntity;
 
 
 
-@Path("/database/{id}/{instance}/table/{tablename}/constraint/{conname}")
+@Path("/database/{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
 public class Constraint extends AbstractResource {
 	
 	
@@ -42,19 +43,21 @@ public class Constraint extends AbstractResource {
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@PathParam("conname") String constraintName ) {
+			@PathParam("conname") String constraintName,
+			@PathParam("staging") BooleanCheck staging ) {
 		
 		if (!canViewDatabase( dbId) ) {
 			return forbidden();
 		}
 		try {
-			ConstraintRequest constraint = serviceInstance().getConstraint(
+			MessageEntity e = serviceInstance().getConstraint(
 					dbId, 
 					instance, 
 					tableName, 
-					constraintName
+					constraintName,
+					staging.getValue()
 					);
-			return Response.ok(constraint).build();
+			return Response.ok(e).build();
 		}
 		catch ( Exception e ) {
 			//TODO
@@ -70,13 +73,15 @@ public class Constraint extends AbstractResource {
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("conname") String constraintName,
+			@PathParam("staging") BooleanCheck staging,
 			ConstraintRequest constraint ) {
 		
 		if (!canModifyDatabase( dbId ) ) {
 			return forbidden();
 		}
 		try {
-			serviceInstance().createConstraint(dbId, instance, tableName, constraint);
+			serviceInstance().createConstraint(dbId, instance, tableName, constraintName, constraint,
+					staging.getValue());
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -93,9 +98,14 @@ public class Constraint extends AbstractResource {
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("conname") String constraintName,
+			@PathParam("staging") BooleanCheck staging,
 			ConstraintRequest constraint ) {
+		if (!canModifyDatabase( dbId ) ) {
+			return forbidden();
+		}
 		try {
-			serviceInstance().updateConstraint(dbId, instance, tableName,constraintName, constraint);
+			serviceInstance().updateConstraint(dbId, instance, tableName,constraintName, constraint,
+					staging.getValue());
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -110,9 +120,14 @@ public class Constraint extends AbstractResource {
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@PathParam("conname") String constraintName ) {
+			@PathParam("conname") String constraintName,
+			@PathParam("staging") BooleanCheck staging ) {
+		if (!canModifyDatabase( dbId ) ) {
+			return forbidden();
+		}
 		try {
-			serviceInstance().deleteConstraint(dbId, instance, tableName, constraintName);
+			serviceInstance().deleteConstraint(dbId, instance, tableName, constraintName,
+					staging.getValue());
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {

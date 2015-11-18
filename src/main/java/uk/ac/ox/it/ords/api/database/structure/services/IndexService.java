@@ -19,6 +19,7 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 import java.util.ServiceLoader;
 
 import uk.ac.ox.it.ords.api.database.structure.metadata.IndexRequest;
+import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.IndexServiceImpl;
 
 public interface IndexService {
 	
@@ -31,7 +32,7 @@ public interface IndexService {
 	 * @return
 	 * @throws Exception
 	 */
-	public IndexRequest getIndex ( int dbId, String instance, String tableName, String indexName ) throws Exception;
+	public MessageEntity getIndex ( int dbId, String instance, String tableName, String indexName, boolean staging ) throws Exception;
 	
 	/**
 	 * 
@@ -41,7 +42,7 @@ public interface IndexService {
 	 * @param newIndex
 	 * @throws Exception
 	 */
-	public void createIndex ( int dbId, String instance, String tableName, IndexRequest newIndex ) throws Exception;
+	public void createIndex ( int dbId, String instance, String tableName, String indexName, IndexRequest newIndex, boolean staging ) throws Exception;
 	
 	/**
 	 * 
@@ -52,7 +53,7 @@ public interface IndexService {
 	 * @param index
 	 * @throws Exception
 	 */
-	public void updateIndex ( int dbId, String instance, String tableName, String indexName, IndexRequest index ) throws Exception;
+	public void updateIndex ( int dbId, String instance, String tableName, String indexName, IndexRequest index, boolean staging ) throws Exception;
 	
 	/**
 	 * 
@@ -62,7 +63,7 @@ public interface IndexService {
 	 * @param index
 	 * @throws Exception
 	 */
-	public void deleteIndex ( int dbId, String instance, String tableName, String indexName ) throws Exception;
+	public void deleteIndex ( int dbId, String instance, String tableName, String indexName, boolean staging ) throws Exception;
 
 	
 	/**
@@ -88,7 +89,7 @@ public interface IndexService {
 	    	// If no service provider is found, use the default
 	    	//
 	    	if (provider == null){
-	// TODO    		provider = new IndexServiceImpl();
+	    		provider = new IndexServiceImpl();
 	    	}
 	    	
 	    	return provider;

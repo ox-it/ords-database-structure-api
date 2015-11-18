@@ -245,6 +245,33 @@ public class StructureServiceImpl {
 						databaseName, "public", tableName, columnName);
 		return runCountSql(sql, databaseName, userName, password) == 1;
 	}
+	
+	
+	public boolean checkConstraintExists(String tableName, String constraintName,
+			String databaseName, String userName, String password) {
+        String query = "SELECT COUNT(*) as count FROM information_schema.table_constraints "
+                + "WHERE table_catalog=%s AND table_schema=%s AND table_name=%s AND constraint_name=%s;";
+        query = String.format(query, quote_ident(databaseName),
+        		"public",
+        		quote_ident(tableName),
+        		quote_ident(constraintName));
+        return runCountSql(query, databaseName, userName, password) == 1;
+ 
+	}
+	
+	
+	
+	public boolean checkIndexExists (String tableName, String indexName,
+			String databaseName, String userName, String password ) {
+        String query = "SELECT COUNT(*) FROM pg_index as idx JOIN pg_class as i ON i.oid = idx.indexrelid "           
+                +"WHERE CAST(idx.indrelid::regclass as text) = %s AND relname = %s";
+        query = String.format(query,
+        		quote_ident(tableName),
+        		quote_ident(indexName));
+        return runCountSql(query,databaseName, userName, password) == 1;
+
+
+	}
 
 	private int runCountSql(String sql, String dbName, String username,
 			String password) {
@@ -289,6 +316,29 @@ public class StructureServiceImpl {
 	}
 	
 	
+	protected Object singleResultQuery ( String query, String databaseName, String userName, String password){
+		Session session;
+		if ( databaseName == null ) {
+			session = this.getOrdsDBSessionFactory().getCurrentSession();
+		}
+		else {
+			session = this.getUserDBSessionFactory(databaseName, userName, password).getCurrentSession();
+		}
+		try {
+			Transaction transaction = session.beginTransaction();
+			SQLQuery sqlQuery = session.createSQLQuery(query);
+			Object result = sqlQuery.uniqueResult();
+			transaction.commit();
+			return result;
+		}
+		catch (Exception e) {
+			log.debug(e.getMessage());
+			session.getTransaction().rollback();
+			throw e;
+		}
+	}
+	
+	
 	protected void runSQLStatements(List<String> statements, String databaseName, String userName, String password ){
 		Session session;
 		if ( databaseName == null ) {
@@ -309,9 +359,6 @@ public class StructureServiceImpl {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
-		}
-		finally {
-			session.close();
 		}
 	}
 	
