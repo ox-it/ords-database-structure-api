@@ -31,6 +31,7 @@ import org.hibernate.criterion.Restrictions;
 
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.EntityType;
+import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureRoleService;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.api.user.model.User;
@@ -77,6 +78,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		String password = this.getODBCPassword();
 		this.createOBDCUserRole(username, password);
 		OrdsPhysicalDatabase db = this.createEmptyDatabase(logicalDBId, username, password);
+		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(db.getPhysicalDatabaseId());
 		return db;
 	}
 
