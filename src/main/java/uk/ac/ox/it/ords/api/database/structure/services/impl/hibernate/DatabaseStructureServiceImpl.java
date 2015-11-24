@@ -16,8 +16,6 @@
 
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
-
-import java.sql.SQLException;
 import java.util.List;
 
 import javax.ws.rs.NotFoundException;
@@ -31,36 +29,82 @@ import org.hibernate.criterion.Restrictions;
 
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.EntityType;
+import uk.ac.ox.it.ords.api.database.structure.model.User;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureRoleService;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
-import uk.ac.ox.it.ords.api.user.model.User;
-import uk.ac.ox.it.ords.api.user.services.UserService;
 import uk.ac.ox.it.ords.api.database.structure.model.SchemaDesignerTable;
+import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissionSets;
+import uk.ac.ox.it.ords.security.model.Permission;
+import uk.ac.ox.it.ords.security.services.PermissionsService;
 
 public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		implements
 			DatabaseStructureService {
+	
+	public void init() throws Exception {
+		PermissionsService service = PermissionsService.Factory.getInstance();
+		//
+		// Anyone with the "User" role can contribute to projects
+		//
+		for (String permission : DatabaseStructurePermissionSets.getPermissionsForUser()){
+			Permission permissionObject = new Permission();
+			permissionObject.setRole("user");
+			permissionObject.setPermission(permission);
+			service.createPermission(permissionObject);
+		}
+		
+		//
+		// Anyone with the "LocalUser" role can create new trial projects
+		//
+		for (String permission : DatabaseStructurePermissionSets.getPermissionsForLocalUser()){
+			Permission permissionObject = new Permission();
+			permissionObject.setRole("localuser");
+			permissionObject.setPermission(permission);
+			service.createPermission(permissionObject);
+		}
+		
+		//
+		// Anyone with the "Administrator" role can create new full
+		// projects and upgrade projects to full, and update any
+		// user projects
+		//
+		for (String permission : DatabaseStructurePermissionSets.getPermissionsForSysadmin()){
+			Permission permissionObject = new Permission();
+			permissionObject.setRole("administrator");
+			permissionObject.setPermission(permission);
+			service.createPermission(permissionObject);
+		}
+
+		//
+		// "Anonymous" can View public projects
+		//
+		for (String permission : DatabaseStructurePermissionSets.getPermissionsForAnonymous()){
+			Permission permissionObject = new Permission();
+			permissionObject.setRole("anonymous");
+			permissionObject.setPermission(permission);
+			service.createPermission(permissionObject);
+		}
+	}
+	
 
 	@Override
 	public List<OrdsPhysicalDatabase> getDatabaseList() throws Exception {
 		String principalName = SecurityUtils.getSubject().getPrincipal()
 				.toString();
-		UserService userService = UserService.Factory.getInstance();
 
-		User u = userService.getUserByPrincipalName(principalName);
-		
-		Session session = this.getOrdsDBSessionFactory().getCurrentSession();
+		User u = this.getUserByPrincipal(principalName);
+
+		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
 			@SuppressWarnings("unchecked")
-			List<OrdsPhysicalDatabase> dbs = session.createCriteria(OrdsPhysicalDatabase.class).
-					add(Restrictions.eq("actorId", u.getUserId())).
-					list();
+			List<OrdsPhysicalDatabase> dbs = session
+					.createCriteria(OrdsPhysicalDatabase.class)
+					.add(Restrictions.eq("actorId", u.getUserId())).list();
 			transaction.commit();
 			return dbs;
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
@@ -68,6 +112,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		finally {
 			session.close();
 		}
+
 
 	}
 
@@ -77,31 +122,33 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		String username = this.getODBCUserName();
 		String password = this.getODBCPassword();
 		this.createOBDCUserRole(username, password);
-		OrdsPhysicalDatabase db = this.createEmptyDatabase(logicalDBId, username, password);
-		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(db.getPhysicalDatabaseId());
+		OrdsPhysicalDatabase db = this.createEmptyDatabase(logicalDBId,
+				username, password);
+		DatabaseStructureRoleService.Factory.getInstance()
+				.createInitialPermissions(db.getPhysicalDatabaseId());
 		return db;
 	}
-
 
 	@Override
 	public OrdsPhysicalDatabase getDatabaseMetaData(int dbId, String instance)
 			throws Exception {
-		Session session = this.getOrdsDBSessionFactory().getCurrentSession();
+		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
-			EntityType dbType = OrdsPhysicalDatabase.EntityType.valueOf(instance
-					.toUpperCase());
+			EntityType dbType = OrdsPhysicalDatabase.EntityType
+					.valueOf(instance.toUpperCase());
 			@SuppressWarnings("unchecked")
-			List<OrdsPhysicalDatabase> dbs = session.createCriteria(OrdsPhysicalDatabase.class)
+			List<OrdsPhysicalDatabase> dbs = session
+					.createCriteria(OrdsPhysicalDatabase.class)
 					.add(Restrictions.eq("physicalDatabaseId", dbId))
-							.add(Restrictions.eq("entityType", dbType)).list();
+					.add(Restrictions.eq("entityType", dbType)).list();
 			transaction.commit();
-			if ( dbs.size() != 1 ) {
-				throw new NotFoundException("Cannot find physical database id "+dbId);
+			if (dbs.size() != 1) {
+				throw new NotFoundException("Cannot find physical database id "
+						+ dbId);
 			}
 			return dbs.get(0);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
@@ -109,54 +156,60 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		finally {
 			session.close();
 		}
+
 	}
 
 	@Override
-	public TableList getDatabaseTableList(int dbId, String instance, boolean staging)
-			throws Exception {
+	public TableList getDatabaseTableList(int dbId, String instance,
+			boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		// we need to get the physical database this time because we need it's id later
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		// we need to get the physical database this time because we need it's
+		// id later
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(
+				dbId, instance);
 		String databaseName;
-		if ( !staging ) {
+		if (!staging) {
 			databaseName = database.getDbConsumedName();
-		}
-		else {
-			databaseName = this.calculateStagingName(database.getDbConsumedName());
+		} else {
+			databaseName = this.calculateStagingName(database
+					.getDbConsumedName());
 		}
 
 		String query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name";
 		// getting a single scalar value so hibernate returns a list of strings
-		List results = this.runSQLQuery(query, databaseName, userName, password);
+		@SuppressWarnings("rawtypes")
+		List results = this
+				.runSQLQuery(query, databaseName, userName, password);
 		TableList tables = new TableList();
-		
-        int counter = 0;
-        int multiplier; // Convenience variables for displaying the tables
-        // in slightly less cramped positions on the grid
-        if (results.size() > 50) {
-            multiplier = 1;
-        }
-        else if (results.size() > 25) {
-            multiplier = 50;
-        }
-        else {
-            multiplier = 120;
-        }
 
-		for ( Object tableNameObject: results) {
+		int counter = 0;
+		int multiplier; // Convenience variables for displaying the tables
+		// in slightly less cramped positions on the grid
+		if (results.size() > 50) {
+			multiplier = 1;
+		} else if (results.size() > 25) {
+			multiplier = 50;
+		} else {
+			multiplier = 120;
+		}
+
+		for (Object tableNameObject : results) {
 			String tableName = tableNameObject.toString();
 			// get the schema designer table for this table
-			SchemaDesignerTable sdt = this.getSchemaDesignerTable(database.getPhysicalDatabaseId(), tableName.toString());
-			String comment = this.tableComment(tableName, databaseName, userName, password);
+			SchemaDesignerTable sdt = this.getSchemaDesignerTable(
+					database.getPhysicalDatabaseId(), tableName.toString());
+			String comment = this.tableComment(tableName, databaseName,
+					userName, password);
 			tables.addTable(tableName, comment);
-            addTableMetadata(tableName, tables);
-            if (sdt == null) {
-                tables.setXY(tableName, counter*multiplier, counter*multiplier);
-            } else {
-                tables.setXY(tableName, sdt.getX(), sdt.getY());
-            }
-        	counter++;
+			addTableMetadata(tableName, tables);
+			if (sdt == null) {
+				tables.setXY(tableName, counter * multiplier, counter
+						* multiplier);
+			} else {
+				tables.setXY(tableName, sdt.getX(), sdt.getY());
+			}
+			counter++;
 		}
 		return tables;
 	}
@@ -164,55 +217,71 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	@Override
 	public String createNewStagingDatabase(int dbId, String instance)
 			throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
-		String stagingName = this.calculateStagingName(database.getDbConsumedName());
-		if (this.checkDatabaseExists(stagingName) ) {
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(
+				dbId, instance);
+		String stagingName = this.calculateStagingName(database
+				.getDbConsumedName());
+		if (this.checkDatabaseExists(stagingName)) {
 			this.deleteDatabase(dbId, instance, true);
 		}
-        String clonedb = String.format("CREATE DATABASE %s WITH TEMPLATE %s", 
-                quote_ident(stagingName), 
-                quote_ident(database.getDbConsumedName()));
-        this.runSQLStatement(clonedb, null, null, null);
-        String sequenceName = "ords_constraint_seq";
-        String createSequence = String.format("CREATE SEQUENCE %s",
-                                                quote_ident(sequenceName));
-        this.runSQLStatement(createSequence, stagingName, userName, password);
+		String clonedb = String.format(
+				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s",
+				quote_ident(stagingName),
+				quote_ident(database.getDbConsumedName()));
+		this.runSQLStatement(clonedb, null, null, null);
+		// String sequenceName = "ords_constraint_seq";
+		// String createSequence = String.format("CREATE SEQUENCE %s",
+		// quote_ident(sequenceName));
+		// this.runSQLStatement(createSequence, null, null, null);
 		return stagingName;
 	}
 
 	@Override
-	public void updateStagingDatabase(int dbId, OrdsPhysicalDatabase update) throws Exception {
+	public void updateStagingDatabase(int dbId, OrdsPhysicalDatabase update)
+			throws Exception {
 		// TODO Auto-generated method stub
 
 	}
 
 	@Override
-	public void mergeStagingToActual(int dbId, String instance) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+	public void mergeStagingToActual(int dbId, String instance)
+			throws Exception {
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(
+				dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		String stagingName = this.calculateStagingName(databaseName);
-		
-		if ( !this.checkDatabaseExists(database.getDbConsumedName())) {
+
+		if (!this.checkDatabaseExists(database.getDbConsumedName())) {
 			throw new NotFoundException("Original database does not exist");
 		}
-		deleteDatabase(dbId, instance, false);
-		String sql = String.format("ALTER DATABASE %s RENAME TO %s", stagingName, databaseName);
+		String sql = "rollback transaction; drop database " + databaseName
+				+ ";";
+		this.runSQLStatement(sql, null, null, null);
+		sql = String.format("ALTER DATABASE %s RENAME TO %s", stagingName,
+				databaseName);
 		this.runSQLStatement(sql, null, null, null);
 
 	}
 
 	@Override
-	public void deleteDatabase(int dbId, String instance, boolean staging) throws Exception {
+	public void deleteDatabase(int dbId, String instance, boolean staging)
+			throws Exception {
 		// TODO Auto-generated method stub
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
-		String sql = "drop database " + databaseName;
-		this.runSQLQuery(sql, null, null, null);
+		OrdsPhysicalDatabase database = getPhysicalDatabaseFromIDInstance(dbId,
+				instance);
+		String databaseName;
+		if (!staging) {
+			databaseName = database.getDbConsumedName();
+			this.removeModelObject(database);
+		} else {
+			databaseName = this.calculateStagingName(database
+					.getDbConsumedName());
+		}
+		String statement = this.getTerminateStatement(databaseName);
+		this.runSQLQuery(statement, null, null, null);
+		statement = "rollback transaction; drop database " + databaseName + ";";
+		this.runSQLStatement(statement, null, null, null);
 	}
-
 
 	private void createOBDCUserRole(String username, String password)
 			throws Exception {
@@ -231,8 +300,8 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		}
 	}
 
-	private OrdsPhysicalDatabase createEmptyDatabase(int logicalDatabaseId, String userName,
-			String password) throws Exception {
+	private OrdsPhysicalDatabase createEmptyDatabase(int logicalDatabaseId,
+			String userName, String password) throws Exception {
 		log.debug("createEmptyDatabase");
 		OrdsPhysicalDatabase db = new OrdsPhysicalDatabase();
 		db.setLogicalDatabaseId(logicalDatabaseId);
@@ -251,47 +320,50 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		} else {
 			String dbName = db.getDbConsumedName();
 			String statement = String.format(
-					"create database %s owner = \"%s\"", dbName, userName);
+					"rollback transaction;create database %s owner = \"%s\";",
+					dbName, userName);
 
 			this.runSQLStatement(statement, null, null, null);
 			return db;
 		}
 	}
-	
-	private SchemaDesignerTable getSchemaDesignerTable(int databaseId, String tableName) {
-		log.debug("getTable:" + databaseId +","+tableName);
-        Transaction tx = null;
-        Session session = this.getOrdsDBSessionFactory().getCurrentSession();
-        try {
-            tx = session.beginTransaction();
-            SQLQuery q = session.createSQLQuery("SELECT * FROM schemadesignertable WHERE databaseid=:databaseid AND tablename=:tablename")
-                    .addEntity(SchemaDesignerTable.class);
-            q.setParameter("databaseid", databaseId);
-            q.setParameter("tablename", tableName);
-            log.debug(q.toString());
-            @SuppressWarnings("unchecked")
-            List<SchemaDesignerTable> result = q.list();
-            tx.commit();
-            if (result.size() > 0) {
-                return result.get(0);
-            }
-            return null;
-        } catch (HibernateException e) {
-            log.error("Run time exception", e);
-            if (tx != null && tx.isActive()) {
-                try {
-                    tx.rollback();
-                } catch (HibernateException e1) {
-                }
-                throw e;
-            }
-            return null;
-        }
+
+	private SchemaDesignerTable getSchemaDesignerTable(int databaseId,
+			String tableName) {
+		log.debug("getTable:" + databaseId + "," + tableName);
+		Transaction tx = null;
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			tx = session.beginTransaction();
+			SQLQuery q = session
+					.createSQLQuery(
+							"SELECT * FROM schemadesignertable WHERE databaseid=:databaseid AND tablename=:tablename")
+					.addEntity(SchemaDesignerTable.class);
+			q.setParameter("databaseid", databaseId);
+			q.setParameter("tablename", tableName);
+			log.debug(q.toString());
+			@SuppressWarnings("unchecked")
+			List<SchemaDesignerTable> result = q.list();
+			tx.commit();
+			if (result.size() > 0) {
+				return result.get(0);
+			}
+			return null;
+		} catch (HibernateException e) {
+			log.error("Run time exception", e);
+			if (tx != null && tx.isActive()) {
+				try {
+					tx.rollback();
+				} catch (HibernateException e1) {
+				}
+				throw e;
+			}
+
+			return null;
+		} finally {
+			session.close();
+		}
+
 	}
-	
-
-
-	
-	
 
 }

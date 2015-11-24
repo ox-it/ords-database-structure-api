@@ -21,19 +21,5 @@ import uk.ac.ox.it.ords.security.permissions.Permissions;
 public class DatabaseStructurePermissions extends Permissions {
 
 	
-	public static String DATABASE_ANY_ACTION(int id){
-		return "database:*:"+id;
-	}
-	public static String DATABASE_DELETE(int id){
-		return "database:delete:"+id;
-	}
-	
-	public static String DATABASE_MODIFY(int id){
-		return "database:modify:"+id;
-	}
-	
-	public static String DATABASE_VIEW(int id){
-		return "database:view:"+id;
-	}
 	
 }

@@ -104,12 +104,6 @@
 			<artifactId>postgresql</artifactId>
 			<version>9.1-901-1.jdbc4</version>
 		</dependency>
-		<!-- User -->
-		<dependency>
-			<groupId>uk.ac.ox.it.ords</groupId>
-			<artifactId>ords-user-api</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
-		</dependency>		
 		<!-- Configuration -->
 		<dependency>
 			<groupId>commons-configuration</groupId>

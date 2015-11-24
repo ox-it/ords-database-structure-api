@@ -18,6 +18,7 @@ package uk.ac.ox.it.ords.api.database.structure.resources;
 
 import java.util.List;
 
+import javax.annotation.PostConstruct;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -26,8 +27,11 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
 
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.shiro.SecurityUtils;
@@ -40,7 +44,12 @@ import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 @Path("/database")
 public class Database extends AbstractResource{
 	
-
+	@PostConstruct
+	public void init() throws Exception {
+		serviceInstance().init();
+	}
+	
+	
 	@GET
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response getDatabases ( ) {
@@ -59,8 +68,9 @@ public class Database extends AbstractResource{
 	@POST
 	@Path("{groupId}/{instance}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response createDatabase ( @PathParam("groupdId") int groupId,
-										@PathParam("instance") String instance) {
+	public Response createDatabase ( @PathParam("groupId") int groupId,
+										@PathParam("instance") String instance,
+										@Context UriInfo uriInfo){
 		
 		OrdsPhysicalDatabase newDatabase;
 		if ( !SecurityUtils.getSubject().isPermitted(
@@ -69,12 +79,14 @@ public class Database extends AbstractResource{
 		}
 		try {
 			newDatabase =  serviceInstance().createNewDatabase(groupId, instance);
+		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+		    builder.path(Integer.toString(newDatabase.getPhysicalDatabaseId()));
+		    return Response.created(builder.build()).build();
 		}
 		catch ( Exception e ) {
 			// TODO: proper exception handling!
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
 		}
-		return Response.ok(newDatabase).build();
 	}
 	
 
@@ -125,7 +137,6 @@ public class Database extends AbstractResource{
 	@Path("{id}/{instance}/staging")
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response updateDatabaseMetadata (
-			OrdsPhysicalDatabase update,
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance ) {
 		
@@ -133,7 +144,7 @@ public class Database extends AbstractResource{
 			return forbidden();		
 		}
 		try {
-			serviceInstance().updateStagingDatabase(dbId, update);
+			serviceInstance().mergeStagingToActual(dbId, instance);
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {

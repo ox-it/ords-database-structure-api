@@ -23,14 +23,17 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
 
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.api.database.structure.services.TableStructureService;
 import uk.ac.ox.it.ords.api.database.structure.metadata.TableRenameRequest;
 
-@Path("/database/{id}/{instance}/table/{tablename}/{staging}")
+@Path("table/database/{id}/{instance}/table/{tablename}/{staging}")
 public class Table extends AbstractResource {
 	
 	@GET
@@ -61,14 +64,17 @@ public class Table extends AbstractResource {
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
-			@PathParam("staging") BooleanCheck staging ) {
+			@PathParam("staging") BooleanCheck staging,
+			@Context UriInfo uriInfo ) {
 		
 		if (!canModifyDatabase(dbId)){
 			return forbidden();
 		}
 		try {
 			serviceInstance().createNewTable(dbId, instance, tableName, staging.getValue());
-			return Response.ok().build();
+		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+		    builder.path(tableName);
+		    return Response.created(builder.build()).build();
 		}
 		catch ( Exception e ) {
 			//TODO

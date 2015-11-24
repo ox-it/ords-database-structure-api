@@ -24,6 +24,9 @@ import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.DatabaseS
 
 public interface DatabaseStructureService {
 	
+	
+	public void init() throws Exception;
+	
 	/**
 	 * Gets a list of all databases for the current user principal
 	 * @return

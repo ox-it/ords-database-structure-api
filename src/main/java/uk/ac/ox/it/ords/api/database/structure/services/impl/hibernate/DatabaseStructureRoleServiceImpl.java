@@ -51,7 +51,7 @@ public class DatabaseStructureRoleServiceImpl
 	@Override
 	public void updateDatabseRole(UserRole userRole, int dbId) throws Exception {
 		userRole.setRole(getPrivateUserRole(userRole.getRole(), dbId));
-		Session session = this.sessionFactory.getCurrentSession();
+		Session session = this.sessionFactory.openSession();
 		try {
 			session.beginTransaction();
 			session.update(userRole);
@@ -60,9 +60,11 @@ public class DatabaseStructureRoleServiceImpl
 			log.error("Error update UserRole", e);
 			session.getTransaction().rollback();
 			throw new Exception("Cannot update UserRole",e);
-		} finally {
-			  HibernateUtils.closeSession();
 		}
+		finally {
+			session.close();
+		}
+
 
 	}
 
@@ -77,7 +79,7 @@ public class DatabaseStructureRoleServiceImpl
 
 	@Override
 	public void createInitialPermissions(int dbId) throws Exception {
-		Session session = this.sessionFactory.getCurrentSession();
+		Session session = this.sessionFactory.openSession();
 		
 		try {
 			session.beginTransaction();
@@ -98,15 +100,17 @@ public class DatabaseStructureRoleServiceImpl
 			log.error("Error creating Project", e);
 			session.getTransaction().rollback();
 			throw new Exception("Cannot create project",e);
-		} finally {
-			  HibernateUtils.closeSession();
 		}
+		finally {
+			session.close();
+		}
+
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public void deletePermissions(int dbId) throws Exception {
-		Session session = this.sessionFactory.getCurrentSession();
+		Session session = this.sessionFactory.openSession();
 		try {
 			session.beginTransaction();
 			//
@@ -140,9 +144,11 @@ public class DatabaseStructureRoleServiceImpl
 			log.error("Error removing roles and permissions", e);
 			session.getTransaction().rollback();
 			throw new Exception("Cannot revoke project permissions",e);
-		} finally {
-			  HibernateUtils.closeSession();
 		}
+		finally {
+			session.close();
+		}
+
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -156,7 +162,7 @@ public class DatabaseStructureRoleServiceImpl
 
 	@Override
 	public List<UserRole> getUserRolesForDatabase(int dbId) throws Exception {
-		Session session = this.sessionFactory.getCurrentSession();
+		Session session = this.sessionFactory.openSession();
 		try {
 			session.beginTransaction();
 			@SuppressWarnings("unchecked")
@@ -168,15 +174,17 @@ public class DatabaseStructureRoleServiceImpl
 		} catch (Exception e) {
 			session.getTransaction().rollback();
 			throw e;
-		} finally {
-			  HibernateUtils.closeSession();
 		}
+		finally {
+			session.close();
+		}
+
 
 	}
 
 	@Override
 	public UserRole getUserRole(int roleId) throws Exception {
-		Session session = this.sessionFactory.getCurrentSession();
+		Session session = this.sessionFactory.openSession();
 		try {
 			session.beginTransaction();
 			UserRole userRole = (UserRole) session.get(UserRole.class, roleId);
@@ -185,16 +193,18 @@ public class DatabaseStructureRoleServiceImpl
 		} catch (Exception e) {
 			session.getTransaction().rollback();
 			throw e;
-		} finally {
-			  HibernateUtils.closeSession();
 		}
+		finally {
+			session.close();
+		}
+
 
 	}
 
 	@Override
 	public UserRole addUserRoleToDatabase(int dbId, UserRole userRole)
 			throws Exception {
-		Session session = this.sessionFactory.getCurrentSession();
+		Session session = this.sessionFactory.openSession();
 		try {
 			session.beginTransaction();
 			validate(userRole);
@@ -208,9 +218,11 @@ public class DatabaseStructureRoleServiceImpl
 			log.error("Error creating user role", e);
 			session.getTransaction().rollback();
 			throw new Exception("Cannot create user role",e);
-		} finally {
-			  HibernateUtils.closeSession();
 		}
+		finally {
+			session.close();
+		}
+
 
 	}
 
@@ -233,7 +245,7 @@ public class DatabaseStructureRoleServiceImpl
 	}
 	
 	protected void removeUserRole(UserRole userRole, int dbId) throws Exception{
-		Session session = this.sessionFactory.getCurrentSession();
+		Session session = this.sessionFactory.openSession();
 		try {
 			session.beginTransaction();
 			session.delete(userRole);
@@ -243,9 +255,11 @@ public class DatabaseStructureRoleServiceImpl
 			session.getTransaction().rollback();
 			log.error("Cannot find user role", e);
 			throw new Exception("Cannot find user role",e);
-		} finally {
-			  HibernateUtils.closeSession();
 		}
+		finally {
+			session.close();
+		}
+
 	}
 
 
@@ -337,7 +351,7 @@ public class DatabaseStructureRoleServiceImpl
 	 * @throws Exception
 	 */
 	protected void createPermission(String role, String permissionString) throws Exception{
-		Session session = this.sessionFactory.getCurrentSession();
+		Session session = this.sessionFactory.openSession();
 		try {
 			session.beginTransaction();
 			Permission permission = new Permission();
@@ -349,9 +363,11 @@ public class DatabaseStructureRoleServiceImpl
 			log.error("Error creating permission", e);
 			session.getTransaction().rollback();
 			throw new Exception("Cannot create permission",e);
-		} finally {
-			  HibernateUtils.closeSession();
 		}
+		finally {
+			session.close();
+		}
+
 	}
 
 }

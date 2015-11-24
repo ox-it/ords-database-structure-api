@@ -35,19 +35,22 @@ import org.hibernate.SQLQuery;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
+import org.hibernate.criterion.Restrictions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.EntityType;
-import uk.ac.ox.it.ords.api.database.structure.conf.MetaConfiguration;
-import uk.ac.ox.it.ords.api.user.model.User;
-import uk.ac.ox.it.ords.api.user.services.UserService;
+import uk.ac.ox.it.ords.api.database.structure.model.User;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
+import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
+
 
 public class StructureServiceImpl {
 	Logger log = LoggerFactory.getLogger(StructureServiceImpl.class);
+	protected static String ODBC_MASTER_PASSWORD_PROPERTY = "ords.odbc.masterpassword";
+
 
 	private SessionFactory sessionFactory;
 
@@ -83,6 +86,7 @@ public class StructureServiceImpl {
 	 */
 	public SessionFactory getUserDBSessionFactory(String dbName,
 			String userName, String password) {
+		// TODO: this needs back in 
 		return HibernateUtils.getUserDBSessionFactory(dbName, userName,
 				password);
 
@@ -90,12 +94,32 @@ public class StructureServiceImpl {
 	
 	
 	protected OrdsPhysicalDatabase getPhysicalDatabaseFromIDInstance ( int dbId, String instance){
-		EntityType dbType = OrdsPhysicalDatabase.EntityType.valueOf(instance
-				.toUpperCase());
-		OrdsPhysicalDatabase database = this
-				.getPhysicalDatabaseByLogicalDatabaseId(dbId, dbType);
-		return database;
+		//EntityType dbType = OrdsPhysicalDatabase.EntityType.valueOf(instance
+		//		.toUpperCase());
+		//OrdsPhysicalDatabase database = this
+		//		.getPhysicalDatabaseByLogicalDatabaseId(dbId, dbType);
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			
+			@SuppressWarnings("unchecked")
+			List<OrdsPhysicalDatabase> users = (List<OrdsPhysicalDatabase>) session.createCriteria(OrdsPhysicalDatabase.class).add(Restrictions.eq("physicalDatabaseId", dbId)).list();
+			transaction.commit();
+			if (users.size() == 1){
+				return users.get(0);
+			} 
+			return null;
+		} catch (Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+		}
+		finally {
+			session.close();
+		}
 	}
+	
+	
+
 
 	public String dbNameFromIDInstance(int dbID, String instance, boolean staging) {
 		OrdsPhysicalDatabase database = getPhysicalDatabaseFromIDInstance(dbID, instance);
@@ -106,6 +130,9 @@ public class StructureServiceImpl {
 			return this.calculateStagingName(database.getDbConsumedName());
 		}
 	}
+	
+	
+
 
 	private OrdsPhysicalDatabase getPhysicalDatabaseByLogicalDatabaseId(
 			int logicalDatabaseId, EntityType entityType) {
@@ -116,7 +143,7 @@ public class StructureServiceImpl {
 		}
 
 		Transaction tx = null;
-		Session session = this.sessionFactory.getCurrentSession();
+		Session session = this.sessionFactory.openSession();
 		try {
 			tx = session.beginTransaction();
 			SQLQuery q = session
@@ -147,6 +174,9 @@ public class StructureServiceImpl {
 				throw e;
 			}
 		}
+		finally {
+			session.close();
+		}
 
 		log.debug("getDatabase: return null");
 		return null;
@@ -161,9 +191,7 @@ public class StructureServiceImpl {
 	public String getODBCUserName() throws Exception {
 		String principalName = SecurityUtils.getSubject().getPrincipal()
 				.toString();
-		UserService userService = UserService.Factory.getInstance();
-
-		User u = userService.getUserByPrincipalName(principalName);
+		User u = this.getUserByPrincipal(principalName);
 		return u.calculateOdbcUserForOrds();
 	}
 
@@ -174,19 +202,15 @@ public class StructureServiceImpl {
 	 * @throws ConfigurationException
 	 */
 	public String getODBCPassword() throws ConfigurationException {
-		String dbPropertiesLocation = MetaConfiguration
-				.getConfigurationLocation("databaseProperties");
-		PropertiesConfiguration configuration = new PropertiesConfiguration(
-				dbPropertiesLocation);
-		return configuration.getProperty("ordsOdbcUserMasterPassword")
-				.toString();
+		return MetaConfiguration.getConfiguration().getString(StructureServiceImpl.ODBC_MASTER_PASSWORD_PROPERTY);
 	}
 	
 	
 	public boolean checkDatabaseExists(String databaseName ) throws Exception {
-		String sql = "SELECT 1 from pg_database WHERE datname = %s";
-		sql = String.format(sql, quote_ident(databaseName));
-		Session session = this.getOrdsDBSessionFactory().getCurrentSession();
+		String sql = "SELECT COUNT(*) as count from pg_database WHERE datname = %s";
+		sql = String.format(sql, quote_literal(databaseName));
+		return this.runCountSql(sql, null, null, null) == 1;
+/*		Session session = this.getOrdsDBSessionFactory().getCurrentSession();
 		try {
 			Transaction transaction = session.beginTransaction();
 			SQLQuery query = session.createSQLQuery(sql);
@@ -205,10 +229,7 @@ public class StructureServiceImpl {
 			session.getTransaction().rollback();
 			throw e;
 		}
-		finally {
-			session.close();
-		}		
-	}
+*/	}
 
 	/**
 	 * Returns true if the table exists in the given database
@@ -251,10 +272,10 @@ public class StructureServiceImpl {
 			String databaseName, String userName, String password) {
         String query = "SELECT COUNT(*) as count FROM information_schema.table_constraints "
                 + "WHERE table_catalog=%s AND table_schema=%s AND table_name=%s AND constraint_name=%s;";
-        query = String.format(query, quote_ident(databaseName),
+        query = String.format(query, quote_literal(databaseName),
         		"public",
-        		quote_ident(tableName),
-        		quote_ident(constraintName));
+        		quote_literal(tableName),
+        		quote_literal(constraintName));
         return runCountSql(query, databaseName, userName, password) == 1;
  
 	}
@@ -266,8 +287,8 @@ public class StructureServiceImpl {
         String query = "SELECT COUNT(*) FROM pg_index as idx JOIN pg_class as i ON i.oid = idx.indexrelid "           
                 +"WHERE CAST(idx.indrelid::regclass as text) = %s AND relname = %s";
         query = String.format(query,
-        		quote_ident(tableName),
-        		quote_ident(indexName));
+        		quote_literal(tableName),
+        		quote_literal(indexName));
         return runCountSql(query,databaseName, userName, password) == 1;
 
 
@@ -275,29 +296,39 @@ public class StructureServiceImpl {
 
 	private int runCountSql(String sql, String dbName, String username,
 			String password) {
-		Session session = this.getUserDBSessionFactory(dbName, username,
-				password).getCurrentSession();
+		Session session;
+		if ( dbName == null ) {
+			session = this.getOrdsDBSessionFactory().openSession();
+		}
+		else {
+		 session = this.getUserDBSessionFactory(dbName, username,
+				password).openSession();
+		}
 		try {
 			Transaction transaction = session.beginTransaction();
 			SQLQuery query = session.createSQLQuery(sql);
 			int count = ((Number)query.uniqueResult()).intValue();
 			transaction.commit();
 			return count;
-		} 
+		}
+		catch (Exception e) {
+			log.debug(e.getMessage());
+			session.getTransaction().rollback();
+			throw e;
+		}
 		finally {
 			session.close();
 		}
-
 	}
 	
 	
 	protected void runSQLStatement(String statement, String databaseName, String userName, String password ) {
 		Session session;
 		if ( databaseName == null ) {
-			session = this.getOrdsDBSessionFactory().getCurrentSession();
+			session = this.getOrdsDBSessionFactory().openSession();
 		}
 		else {
-			session = this.getUserDBSessionFactory(databaseName, userName, password).getCurrentSession();
+			session = this.getUserDBSessionFactory(databaseName, userName, password).openSession();
 		}
 		try {
 			Transaction transaction = session.beginTransaction();
@@ -309,20 +340,20 @@ public class StructureServiceImpl {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
-		}
+		}	
 		finally {
 			session.close();
-		}		
+		}
 	}
 	
 	
 	protected Object singleResultQuery ( String query, String databaseName, String userName, String password){
 		Session session;
 		if ( databaseName == null ) {
-			session = this.getOrdsDBSessionFactory().getCurrentSession();
+			session = this.getOrdsDBSessionFactory().openSession();
 		}
 		else {
-			session = this.getUserDBSessionFactory(databaseName, userName, password).getCurrentSession();
+			session = this.getUserDBSessionFactory(databaseName, userName, password).openSession();
 		}
 		try {
 			Transaction transaction = session.beginTransaction();
@@ -336,16 +367,19 @@ public class StructureServiceImpl {
 			session.getTransaction().rollback();
 			throw e;
 		}
+		finally {
+			session.close();
+		}
 	}
 	
 	
 	protected void runSQLStatements(List<String> statements, String databaseName, String userName, String password ){
 		Session session;
 		if ( databaseName == null ) {
-			session = this.getOrdsDBSessionFactory().getCurrentSession();
+			session = this.getOrdsDBSessionFactory().openSession();
 		}
 		else {
-			session = this.getUserDBSessionFactory(databaseName, userName, password).getCurrentSession();
+			session = this.getUserDBSessionFactory(databaseName, userName, password).openSession();
 		}
 		try {
 			Transaction transaction = session.beginTransaction();
@@ -360,11 +394,14 @@ public class StructureServiceImpl {
 			session.getTransaction().rollback();
 			throw e;
 		}
+		finally {
+			session.close();
+		}
 	}
 	
 	
 	protected void saveModelObject ( Object objectToSave ) throws Exception {
-		Session session = this.getOrdsDBSessionFactory().getCurrentSession();
+		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
 			session.save(objectToSave);
@@ -381,14 +418,33 @@ public class StructureServiceImpl {
 	}
 	
 	
+	
+	protected void removeModelObject ( Object objectToRemove ) throws Exception {
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			session.delete(objectToRemove);
+			transaction.commit();
+		}
+		catch (Exception e) {
+			log.debug(e.getMessage());
+			session.getTransaction().rollback();
+			throw e;
+		}
+		finally {
+			session.close();
+		}
+	}
+	
+	
 	@SuppressWarnings("rawtypes")
 	protected List runSQLQuery ( String query, String databaseName, String username, String password) {
 		Session session;
 		if (databaseName == null ) {
-			session = this.getOrdsDBSessionFactory().getCurrentSession();
+			session = this.getOrdsDBSessionFactory().openSession();
 		}
 		else {
-			session = this.getUserDBSessionFactory(databaseName, username, password).getCurrentSession();
+			session = this.getUserDBSessionFactory(databaseName, username, password).openSession();
 		}
 		try {
 			Transaction transaction = session.beginTransaction();
@@ -450,7 +506,7 @@ public class StructureServiceImpl {
         
         query = String.format(query, quote_ident(tableName), quote_ident(tableName), quote_ident(columnName));
         
-		Session session = this.getOrdsDBSessionFactory().getCurrentSession();
+		Session session = this.getOrdsDBSessionFactory().openSession();
 
 		try {
 			Transaction transaction = session.beginTransaction();
@@ -464,7 +520,7 @@ public class StructureServiceImpl {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
-		} 
+		}
 		finally {
 			session.close();
 		}
@@ -482,7 +538,7 @@ public class StructureServiceImpl {
 				.format("SELECT obj_description(quote_ident('%s')::regclass::oid, 'pg_class') as comment",
 						tableName);
 		Session session = this.getUserDBSessionFactory(databaseName, userName,
-				password).getCurrentSession();
+				password).openSession();
 
 		try {
 			Transaction transaction = session.beginTransaction();
@@ -496,7 +552,7 @@ public class StructureServiceImpl {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
-		} 
+		}
 		finally {
 			session.close();
 		}
@@ -713,7 +769,7 @@ public class StructureServiceImpl {
 		String command = String
 				.format("select %s from INFORMATION_SCHEMA.COLUMNS where table_name = %s ORDER BY ordinal_position ASC",
 						StringUtils.join(fields.iterator(), ","),
-						quote_ident(table));
+						quote_literal(table));
 
 		HashMap<String, String> columnDescription;
 		List<HashMap<String, String>> columnDescriptions = new ArrayList<HashMap<String, String>>();
@@ -758,6 +814,81 @@ public class StructureServiceImpl {
 		}
 		return fieldSize;
     }
+    
+    
+    protected User getUserByPrincipal ( String principalName ) {
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			
+			@SuppressWarnings("unchecked")
+			List<User> users = (List<User>) session.createCriteria(User.class).add(Restrictions.eq("principalName", principalName)).list();
+			transaction.commit();
+			if (users.size() == 1){
+				return users.get(0);
+			} 
+			return null;
+		} catch (Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+		}
+		finally {
+			session.close();
+		}
+    }
+    
+    
+    protected String getTerminateStatement ( String databaseName ) throws Exception {
+        boolean above9_2 = isPostgresVersionAbove9_2();
+        String command;
+        if (above9_2) {
+            log.info("Postgres version is 9.2 or later");
+            command = String.format("select pg_terminate_backend(pid) from pg_stat_activity where datname = '%s' AND pid <> pg_backend_pid()", databaseName);
+        }
+        else {
+            log.info("Postgres version is earlier than 9.2");
+            command = String.format("select pg_terminate_backend(procpid) from pg_stat_activity where datname = '%s' AND procpid <> pg_backend_pid()", databaseName);
+        }
+        return command;
+
+    }
+    
+    private String[] getPostgresVersionArray() throws Exception {
+        
+    	String version = (String) this.singleResultQuery("SELECT version()", null, null, null);
+        
+        String[] versionArray = null;
+        String[] tempVersionArray = null;
+        tempVersionArray = version.split(" ");
+        version = tempVersionArray[1];
+        versionArray = version.split("\\.");
+
+        
+        return versionArray;
+    }
+    
+    public boolean isPostgresVersionAbove9_2() throws Exception {
+        String[] versionArray = getPostgresVersionArray();
+        boolean above = false;
+        if (versionArray != null) {
+            try {
+                int majorVersionNumber = Integer.parseInt(versionArray[0]);
+                int minorVersionNumber = Integer.parseInt(versionArray[1]);
+                if (majorVersionNumber >= 9) {
+                    if (minorVersionNumber >= 2) {
+                        above = true;
+                    }
+                }
+            }
+            catch (NumberFormatException e) {
+                log.error("Unable to get Postgres version");
+            }
+        }
+        
+        
+        return above;
+    }
+
 
 
 }

@@ -58,8 +58,8 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
 		String databaseName = this.dbNameFromIDInstance(dbID, instance, staging);
-		if ( !this.checkTableExists(tableName, databaseName, userName, password)) {
-			throw new NotFoundException(String.format("No table called %s found in database %s", tableName, databaseName));
+		if ( this.checkTableExists(tableName, databaseName, userName, password)) {
+			throw new NamingConflictException(String.format("The table %s already exists in database %s", tableName, databaseName));
 		}
 		this.runSQLStatement(query, databaseName, userName, password);
 
@@ -83,7 +83,7 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 		this.runSQLStatement(query, databaseName, userName, password);
         query = String.format("SELECT sequence_name FROM information_schema.sequences where sequence_name LIKE %s",
         		quote_ident(tableName+"%"));
-        Session session = this.getOrdsDBSessionFactory().getCurrentSession();
+        Session session = this.getOrdsDBSessionFactory().openSession();
         
         try {
         	Transaction transaction = session.beginTransaction();
@@ -108,6 +108,7 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 		finally {
 			session.close();
 		}
+
 		
 	}
 

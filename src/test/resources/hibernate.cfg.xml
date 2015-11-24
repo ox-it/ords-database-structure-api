@@ -2,6 +2,14 @@
 <!DOCTYPE hibernate-configuration PUBLIC
           "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
           "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+<!-- 
+          
+      TEST Configuration
+      
+      This Hibernate configuration is used during testing - it uses a different test
+      database (ordstest) which is set to be dropped and recreated each session.   
+          
+-->
 <hibernate-configuration>
     <session-factory>
         <property name="hibernate.connection.url">jdbc:postgresql://localhost/ordstest</property>
@@ -12,18 +20,12 @@
         <property name="transaction.factory_class">org.hibernate.transaction.JDBCTransactionFactory</property>
         <property name="current_session_context_class">thread</property>
         <property name="hibernate.show_sql">false</property>
-        <property name="hibernate.hbm2ddl.auto">update</property>
+        <property name="hibernate.hbm2ddl.auto">create-drop</property>
         <property name="c3p0.min_size">5</property>
         <property name="c3p0.max_size">20</property>
         <property name="c3p0.timeout">1800</property>
         <property name="c3p0.max_statements">50</property>
         <property name="hibernate.c3p0.idle_test_period">3000</property>
         <property name="connection.provider_class">org.hibernate.connection.C3P0ConnectionProvider</property>
-        <mapping class="uk.ac.ox.it.ords.api.database.structure.model.OrdsDB"/>
-        <mapping class="uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase"/>
-        <mapping class="uk.ac.ox.it.ords.api.database.structure.model.SchemaDesignerTable"/>
-        <mapping class="uk.ac.ox.it.ords.api.database.structure.model.User"/>
-        <mapping class="uk.ac.ox.it.ords.security.model.UserRole"/>
-        <mapping class="uk.ac.ox.it.ords.security.model.Permission"/>
-    </session-factory>
+       </session-factory>
 </hibernate-configuration>

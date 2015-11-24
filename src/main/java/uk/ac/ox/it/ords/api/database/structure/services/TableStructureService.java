@@ -18,6 +18,8 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 
 import java.util.ServiceLoader;
 
+import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.TableStructureServiceImpl;
+
 public interface TableStructureService {
 
 	/**
@@ -92,7 +94,7 @@ public interface TableStructureService {
 	    	// If no service provider is found, use the default
 	    	//
 	    	if (provider == null){
-	// TODO    		provider = new TableStructureServiceImpl();
+	    		provider = new TableStructureServiceImpl();
 	    	}
 	    	
 	    	return provider;

@@ -47,60 +47,71 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 	private final List<String> integerTypes = Arrays.asList("int", "integer",
 			"bigint", "smallint", "int2", "int4", "int8");
 
-
 	public ColumnRequest getColumnMetadata(int dbId, String instance,
-			String tableName, String columnName, boolean staging) throws Exception {
+			String tableName, String columnName, boolean staging)
+			throws Exception {
 
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
+		String databaseName = this
+				.dbNameFromIDInstance(dbId, instance, staging);
 		Session session = this.getUserDBSessionFactory(databaseName, userName,
-				password).getCurrentSession();
+				password).openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			ArrayList<String> fields = new ArrayList<String>();
+			fields.add("column_name");
+			fields.add("data_type");
+			// fields.add("character_maximum_length");
+			// fields.add("numeric_precision");
+			// fields.add("numeric_scale");
+			fields.add("column_default");
+			fields.add("is_nullable");
+			// fields.add("ordinal_position");
 
-		ArrayList<String> fields = new ArrayList<String>();
-		fields.add("column_name");
-		fields.add("data_type");
-		// fields.add("character_maximum_length");
-		// fields.add("numeric_precision");
-		// fields.add("numeric_scale");
-		fields.add("column_default");
-		fields.add("is_nullable");
-		// fields.add("ordinal_position");
+			String command = String
+					.format("select %s from INFORMATION_SCHEMA.COLUMNS where table_name = :table and column_name = :column ORDER BY ordinal_position ASC",
+							StringUtils.join(fields.iterator(), ","));
 
-		String command = String
-				.format("select %s from INFORMATION_SCHEMA.COLUMNS where table_name = :table and column_name = :column ORDER BY ordinal_position ASC",
-						StringUtils.join(fields.iterator(), ","));
+			SQLQuery query = session.createSQLQuery(command);
+			query.setParameter("table", tableName);
+			query.setParameter("column", columnName);
+			query.addScalar("column_name", new StringType());
+			query.addScalar("data_type", new StringType());
+			query.addScalar("column_default", new StringType());
+			query.addScalar("is_nullable", new StringType());
 
-		SQLQuery query = session.createSQLQuery(command);
-		query.setParameter("table", tableName);
-		query.setParameter("column", columnName);
-		query.addScalar("column_name", new StringType());
-		query.addScalar("data_type", new StringType());
-		query.addScalar("column_default", new StringType());
-		query.addScalar("is_nullable", new StringType());
+			@SuppressWarnings("rawtypes")
+			List results = query.list();
+			if (results.size() != 1) {
+				return null;
+			}
+			@SuppressWarnings("rawtypes")
+			Map row = (Map) results.get(0);
 
-		@SuppressWarnings("rawtypes")
-		List results = query.list();
-		if (results.size() != 1) {
-			return null;
+			ColumnRequest column = new ColumnRequest();
+
+			column.setNewname(row.get("column_name").toString());
+			column.setDatatype(row.get("data_type").toString());
+			column.setDefaultvalue(row.get("column_default").toString());
+			boolean nullable = row.get("is_nullable").toString()
+					.compareToIgnoreCase("YES") == 0;
+			column.setNullable(nullable);
+			transaction.commit();
+			return column;
+		} catch (Exception e) {
+			log.debug(e.getMessage());
+			session.getTransaction().rollback();
+			throw e;
+
+		} finally {
+			session.close();
 		}
-		@SuppressWarnings("rawtypes")
-		Map row = (Map) results.get(0);
-
-		ColumnRequest column = new ColumnRequest();
-
-		column.setNewname(row.get("column_name").toString());
-		column.setDatatype(row.get("data_type").toString());
-		column.setDefaultvalue(row.get("column_default").toString());
-		boolean nullable = row.get("is_nullable").toString()
-				.compareToIgnoreCase("YES") == 0;
-		column.setNullable(nullable);
-
-		return column;
 	}
 
 	public void createColumn(int dbId, String instance, String tableName,
-			String columnName, ColumnRequest column,boolean staging) throws Exception {
+			String columnName, ColumnRequest column, boolean staging)
+			throws Exception {
 
 		String datatype = column.getDatatype();
 		String sequenceName = generateSequenceName(tableName, columnName);
@@ -167,9 +178,10 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 		// start the transaction
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
+		String databaseName = this
+				.dbNameFromIDInstance(dbId, instance, staging);
 		Session session = this.getUserDBSessionFactory(databaseName, userName,
-				password).getCurrentSession();
+				password).openSession();
 		try {
 			Transaction tx = session.beginTransaction();
 
@@ -188,22 +200,29 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 				session.createSQLQuery(query).executeUpdate();
 			}
 			tx.commit();
-		} finally {
+		} catch (Exception e) {
+			log.debug(e.getMessage());
+			session.getTransaction().rollback();
+			throw e;
+		}
+		finally {
 			session.close();
 		}
+
 	}
 
-
 	public void updateColumn(int dbId, String instance, String tableName,
-			String columnName, ColumnRequest request, boolean staging) throws Exception {
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
+			String columnName, ColumnRequest request, boolean staging)
+			throws Exception {
+		String databaseName = this
+				.dbNameFromIDInstance(dbId, instance, staging);
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
 
 		if (!this.checkColumnExists(columnName, tableName, databaseName,
 				userName, password)) {
-			throw new NotFoundException(
-					String.format("Column name %s does not exist",columnName));
+			throw new NotFoundException(String.format(
+					"Column name %s does not exist", columnName));
 		}
 		log.debug("doQuery");
 		String newName = request.getNewname();
@@ -238,11 +257,10 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 				String command = String
 						.format("SELECT data_type, pg_get_serial_sequence(%s, %s) AS sequence"
 								+ " FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = %s"
-								+ " AND column_name = %s", 
+								+ " AND column_name = %s",
 								quote_ident(tableName),
 								quote_ident(columnName),
-								quote_ident(tableName),
-								quote_ident(columnName));
+								quote_ident(tableName), quote_ident(columnName));
 				@SuppressWarnings("rawtypes")
 				List rows = this.runSQLQuery(command, databaseName, userName,
 						password);
@@ -424,10 +442,10 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 		this.runSQLStatements(statements, databaseName, userName, password);
 	}
 
-
 	public void deleteColumn(int dbId, String instance, String tableName,
 			String columnName, boolean staging) throws Exception {
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
+		String databaseName = this
+				.dbNameFromIDInstance(dbId, instance, staging);
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
 
