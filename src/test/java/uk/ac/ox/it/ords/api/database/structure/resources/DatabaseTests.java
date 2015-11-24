@@ -23,7 +23,6 @@ import javax.ws.rs.core.Response;
 import org.junit.Test;
 
 import uk.ac.ox.it.ords.api.database.structure.metadata.ColumnRequest;
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 
 public class DatabaseTests extends AbstractResourceTest {
 
@@ -101,6 +100,8 @@ public class DatabaseTests extends AbstractResourceTest {
 			// Create a column
 			response = getClient().path("/column/database/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(columnRequest);
 			assertEquals(200, response.getStatus());
+			
+			
 			
 			// delete the original
 			response = getClient().path("/database/"+dbID+"/MAIN").delete();
