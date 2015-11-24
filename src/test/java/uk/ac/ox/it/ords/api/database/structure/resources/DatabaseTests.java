@@ -22,6 +22,7 @@ import javax.ws.rs.core.Response;
 
 import org.junit.Test;
 
+import uk.ac.ox.it.ords.api.database.structure.metadata.ColumnRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 
 public class DatabaseTests extends AbstractResourceTest {
@@ -76,7 +77,7 @@ public class DatabaseTests extends AbstractResourceTest {
 	
 	
 	@Test
-	public void testTable() {
+	public void testBuildTable() {
 
 			loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 			Response response = getClient().path("/database/1205/MAIN").post(null);
@@ -92,6 +93,14 @@ public class DatabaseTests extends AbstractResourceTest {
 			// Create a table
 			response = getClient().path("/table/database/"+dbID+"/MAIN/table/testTable/false").post(null);
 			assertEquals(201, response.getStatus());
+			
+			ColumnRequest columnRequest = new ColumnRequest();
+			columnRequest.setNewname("testColumn");
+			columnRequest.setDatatype("varchar");
+			columnRequest.setNullable(true);
+			// Create a column
+			response = getClient().path("/column/database/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(columnRequest);
+			assertEquals(200, response.getStatus());
 			
 			// delete the original
 			response = getClient().path("/database/"+dbID+"/MAIN").delete();

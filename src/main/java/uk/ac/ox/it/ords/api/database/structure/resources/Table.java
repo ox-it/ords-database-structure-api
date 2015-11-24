@@ -33,7 +33,7 @@ import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.api.database.structure.services.TableStructureService;
 import uk.ac.ox.it.ords.api.database.structure.metadata.TableRenameRequest;
 
-@Path("table/database/{id}/{instance}/table/{tablename}/{staging}")
+@Path("/table/database/{id}/{instance}/table/{tablename}/{staging}")
 public class Table extends AbstractResource {
 	
 	@GET

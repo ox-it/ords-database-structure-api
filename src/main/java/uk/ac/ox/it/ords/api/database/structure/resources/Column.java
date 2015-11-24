@@ -33,7 +33,7 @@ import uk.ac.ox.it.ords.api.database.structure.metadata.ColumnRequest;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
 import uk.ac.ox.it.ords.api.database.structure.services.ColumnStructureService;
 
-@Path("/database/{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
+@Path("/column/database/{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
 public class Column extends AbstractResource {
 	
 	@GET
