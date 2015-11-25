@@ -45,9 +45,9 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 			throw new NotFoundException(String.format("No table called %s found in database %s", tableName, databaseName));
 		}
 		TableList table = new TableList();
-		String comment = this.tableComment(tableName, databaseName, userName, password);
+		String comment = this.tableComment(databaseName, tableName);
 		table.addTable(tableName, comment);
-        addTableMetadata(tableName, table);
+        addTableMetadata(databaseName, tableName, table);
 		return table;
 	}
 

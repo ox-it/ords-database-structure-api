@@ -16,8 +16,16 @@
 
 package uk.ac.ox.it.ords.api.database.structure.model;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.validation.constraints.NotNull;
 
 
+@Entity
+@Table(name="schemadesignertable")
 public class SchemaDesignerTable {
 	private int id;
     private int databaseId;
@@ -25,7 +33,8 @@ public class SchemaDesignerTable {
     private int x;
     private int y;
 
-
+	@Id
+	@GeneratedValue
     public int getId() {
         return id;
     }
@@ -34,7 +43,8 @@ public class SchemaDesignerTable {
         this.id = id;
     }
 
-
+    @NotNull
+    @Column(name="databaseid")
     public int getDatabaseId() {
         return databaseId;
     }
@@ -43,7 +53,8 @@ public class SchemaDesignerTable {
         this.databaseId = databaseId;
     }
 
-
+    @NotNull
+    @Column(name="tablename")
     public String getTableName() {
         return tableName;
     }
@@ -52,6 +63,7 @@ public class SchemaDesignerTable {
         this.tableName = tableName;
     }
 
+    @NotNull
     public int getX() {
         return x;
     }
@@ -60,6 +72,7 @@ public class SchemaDesignerTable {
         this.x = x;
     }
 
+    @NotNull
     public int getY() {
         return y;
     }

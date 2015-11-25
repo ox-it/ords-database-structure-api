@@ -18,11 +18,14 @@ package uk.ac.ox.it.ords.api.database.structure.resources;
 
 import static org.junit.Assert.*;
 
+import java.util.HashMap;
+
 import javax.ws.rs.core.Response;
 
 import org.junit.Test;
 
 import uk.ac.ox.it.ords.api.database.structure.metadata.ColumnRequest;
+import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 
 public class DatabaseTests extends AbstractResourceTest {
 
@@ -101,6 +104,13 @@ public class DatabaseTests extends AbstractResourceTest {
 			response = getClient().path("/column/database/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(columnRequest);
 			assertEquals(200, response.getStatus());
 			
+			// get the whole database structure
+			response = getClient().path("/database/"+dbID+"/MAIN/false").get();
+			assertEquals(200, response.getStatus());
+			TableList tableList = (TableList)response.readEntity(TableList.class);
+			@SuppressWarnings("rawtypes")
+			HashMap tables = tableList.getTables();
+			assertEquals(1, tables.size());
 			
 			
 			// delete the original

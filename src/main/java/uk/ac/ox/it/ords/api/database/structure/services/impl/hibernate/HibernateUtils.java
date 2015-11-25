@@ -16,6 +16,7 @@
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
 import java.io.File;
+import java.util.List;
 
 import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
@@ -27,7 +28,9 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
+import uk.ac.ox.it.ords.api.database.structure.model.SchemaDesignerTable;
 import uk.ac.ox.it.ords.api.database.structure.model.User;
+import uk.ac.ox.it.ords.api.database.structure.services.ServerConfigurationService;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.model.UserRole;
@@ -49,6 +52,7 @@ public class HibernateUtils {
 	protected static void addMappings(Configuration configuration){
 		configuration.addAnnotatedClass(OrdsDB.class);
 		configuration.addAnnotatedClass(OrdsPhysicalDatabase.class);
+		configuration.addAnnotatedClass(SchemaDesignerTable.class);
 		configuration.addAnnotatedClass(User.class);
 		configuration.addAnnotatedClass(Permission.class);
 		//configuration.addAnnotatedClass(Audit.class);
@@ -95,8 +99,9 @@ public class HibernateUtils {
 					odbcUser);
 			userDBConfiguration.setProperty("hibernate.connection.password",
 					odbcPassword);
-
-			addMappings(userDBConfiguration);
+			
+			// oops don't do this or it adds all the ords tables to the user's database!
+			//addMappings(userDBConfiguration);
 
 			userDBServiceRegistry = new ServiceRegistryBuilder().applySettings(
 					userDBConfiguration.getProperties()).buildServiceRegistry();
@@ -107,6 +112,16 @@ public class HibernateUtils {
 			System.err.println("Error creating Session: " + he);
 			throw new ExceptionInInitializerError(he);
 		}
+	}
+	
+	public static String getFirstDBServer ( ) throws Exception {
+		ServerConfigurationService serverConf = ServerConfigurationService.Factory.getInstance();
+		List<String> serverList = serverConf.getServers();
+		if ( serverList.size() == 0 ) {
+			throw new Exception("Configuration problem, no servers found in configuration files");
+		}
+		return serverList.get(0);
+
 	}
 	
 	

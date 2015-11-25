@@ -199,10 +199,9 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 			// get the schema designer table for this table
 			SchemaDesignerTable sdt = this.getSchemaDesignerTable(
 					database.getPhysicalDatabaseId(), tableName.toString());
-			String comment = this.tableComment(tableName, databaseName,
-					userName, password);
+			String comment = this.tableComment(databaseName, databaseName);
 			tables.addTable(tableName, comment);
-			addTableMetadata(tableName, tables);
+			addTableMetadata(databaseName, tableName, tables);
 			if (sdt == null) {
 				tables.setXY(tableName, counter * multiplier, counter
 						* multiplier);

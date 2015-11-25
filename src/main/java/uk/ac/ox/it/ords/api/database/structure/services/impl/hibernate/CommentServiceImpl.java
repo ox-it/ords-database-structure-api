@@ -33,7 +33,7 @@ public class CommentServiceImpl extends StructureServiceImpl
 		if (!this.checkTableExists(tableName, databaseName, userName, password)) {
 			throw new NotFoundException();
 		}
-		return this.getTableComment(dbId, instance, tableName, staging);
+		return this.tableComment(databaseName, tableName);
 	}
 
 	@Override
@@ -60,7 +60,7 @@ public class CommentServiceImpl extends StructureServiceImpl
 		if ( !this.checkColumnExists(columnName, tableName, databaseName, userName, password)){
 			throw new NotFoundException();
 		}
-		return this.getColumnComment(dbId, instance, tableName, columnName, staging);
+		return this.columnComment(databaseName, tableName, columnName);
 	}
 
 	@Override
