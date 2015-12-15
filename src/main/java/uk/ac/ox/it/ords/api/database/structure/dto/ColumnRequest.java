@@ -15,7 +15,7 @@
  */
 
 
-package uk.ac.ox.it.ords.api.database.structure.metadata;
+package uk.ac.ox.it.ords.api.database.structure.dto;
 
 
 public class ColumnRequest {

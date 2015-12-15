@@ -17,13 +17,22 @@
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.ws.rs.NotFoundException;
 
+import org.hibernate.Criteria;
 import org.hibernate.SQLQuery;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.hibernate.criterion.Restrictions;
 
+import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
+import uk.ac.ox.it.ords.api.database.structure.dto.TablePosition;
 import uk.ac.ox.it.ords.api.database.structure.exceptions.NamingConflictException;
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
+import uk.ac.ox.it.ords.api.database.structure.model.SchemaDesignerTable;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.api.database.structure.services.TableStructureService;
 
@@ -36,29 +45,39 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	}
 
 	@Override
-	public TableList getTableMetadata(int dbID, String instance,
+	public TableList getTableMetadata(int dbId, String instance,
 			String tableName, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbID, instance, staging);
-		if ( !this.checkTableExists(tableName, databaseName, userName, password)) {
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
+		if ( !this.checkTableExists(tableName, databaseName,server, userName, password)) {
 			throw new NotFoundException(String.format("No table called %s found in database %s", tableName, databaseName));
 		}
 		TableList table = new TableList();
-		String comment = this.tableComment(databaseName, tableName);
+		String comment = this.tableComment(databaseName, server, tableName);
 		table.addTable(tableName, comment);
-        addTableMetadata(databaseName, tableName, table);
+        addTableMetadata(databaseName, server, tableName, table);
 		return table;
 	}
 
 	@Override
-	public void createNewTable(int dbID, String instance, String tableName, boolean staging)
+	public void createNewTable(int dbId, String instance, String tableName, boolean staging)
 			throws Exception {
         final String query = String.format("CREATE TABLE %s();", quote_ident(tableName));
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbID, instance, staging);
-		if ( this.checkTableExists(tableName, databaseName, userName, password)) {
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
+		if ( this.checkTableExists(tableName, databaseName, server, userName, password)) {
 			throw new NamingConflictException(String.format("The table %s already exists in database %s", tableName, databaseName));
 		}
 		this.runSQLStatement(query, databaseName, userName, password);
@@ -66,15 +85,20 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	}
 
 	@Override
-	public void renameTable(int dbID, String instance, String tableName,
+	public void renameTable(int dbId, String instance, String tableName,
 			String tableNewName, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbID, instance, staging);
-		if ( !this.checkTableExists(tableName, databaseName, userName, password)) {
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
+		if ( !this.checkTableExists(tableName, databaseName, server, userName, password)) {
 			throw new NotFoundException(String.format("No table called %s found in database %s", tableName, databaseName));
 		}
-		if ( this.checkTableExists(tableNewName, databaseName, userName, password)){
+		if ( this.checkTableExists(tableNewName, databaseName,server, userName, password)){
 			throw new NamingConflictException("There is already a table called "+tableNewName+" in database "+databaseName);
 		}
 		String query = String.format("ALTER TABLE %s RENAME TO %s;", 
@@ -113,17 +137,104 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	}
 
 	@Override
-	public void deleteTable(int dbID, String instance, String tableName, boolean staging)
+	public void deleteTable(int dbId, String instance, String tableName, boolean staging)
 			throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbID, instance, staging);
-		if ( !this.checkTableExists(tableName, databaseName, userName, password)) {
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
+		if ( !this.checkTableExists(tableName, databaseName, server, userName, password)) {
 			throw new NotFoundException(String.format("No table called %s found in database %s", tableName, databaseName));
 		}
         final String query = String.format("DROP TABLE %s;", quote_ident(tableName));
         this.runSQLStatement(query, databaseName, userName, password);
         
 	}
+
+	@Override
+	public void setTablePositions(int dbId, String instance,
+			PositionRequest positionRequest) throws Exception {
+        List<String> tableNames = new ArrayList<String>();
+        // Create or update tables from the schema designer
+        for (TablePosition tablePosition : positionRequest.getPositions()) {
+            // If there's no saved position for the table, create one.
+            // otherwise, update the existing one.
+            tableNames.add(tablePosition.getTablename());
+            SchemaDesignerTable table = this.getTablePositionRecord(dbId, tablePosition.getTablename());
+            if (table == null) {
+                table = new SchemaDesignerTable();
+                table.setDatabaseId(dbId);
+                table.setTableName(tablePosition.getTablename());
+                table.setX(tablePosition.getX());
+                table.setY(tablePosition.getY());
+                this.saveModelObject(table);
+            } else {
+                table.setX(tablePosition.getX());
+                table.setY(tablePosition.getY());
+                this.updateModelObject(table);
+            }
+        }
+        // Remove any data for tables no longer in the schema
+        List<SchemaDesignerTable> savedTables = this.getTablePositionRecordsForDatabase(dbId);
+        for (SchemaDesignerTable savedTable : savedTables) {
+            if (!tableNames.contains(savedTable.getTableName())) {
+                this.removeModelObject(savedTable);
+            }    
+        }
+		
+		
+	}
+	
+	
+	private SchemaDesignerTable getTablePositionRecord ( int dbId, String tableName ) {
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			Criteria criteria = session.createCriteria(SchemaDesignerTable.class);
+			criteria.add(Restrictions.eq("databaseId", dbId));
+			criteria.add(Restrictions.eq("tableName", tableName));
+			@SuppressWarnings("unchecked")
+			List<SchemaDesignerTable> tables =  (List<SchemaDesignerTable>)criteria.list();
+			transaction.commit();
+			if ( tables.size() == 1) {
+				return tables.get(0);
+			}
+			return null;
+		} 
+		catch (Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+		} 
+		finally {
+			session.close();
+		}
+	}
+	
+	
+	private List<SchemaDesignerTable>	getTablePositionRecordsForDatabase ( int dbId ) {
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			Criteria criteria = session.createCriteria(SchemaDesignerTable.class);
+			criteria.add(Restrictions.eq("databaseId", dbId));
+			List<SchemaDesignerTable> tables = (List<SchemaDesignerTable>)criteria.list();
+			transaction.commit();
+			return tables;
+		}
+		catch (Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+		} 
+		finally {
+			session.close();
+		}
+	}
+	
+	
+	
 
 }

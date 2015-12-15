@@ -18,6 +18,7 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 
 import java.util.ServiceLoader;
 
+import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.TableStructureServiceImpl;
 
 public interface TableStructureService {
@@ -61,6 +62,14 @@ public interface TableStructureService {
 	 */
 	public void renameTable ( int dbID, String instance, String tableName, String tableNewName, boolean staging ) throws Exception;
 	
+	
+	/**
+	 * 
+	 * @param dbID
+	 * @param instance
+	 * @param positionRequest
+	 */
+	public void setTablePositions ( int dbID, String instance, PositionRequest positionRequest ) throws Exception;
 	
 	/**
 	 * 

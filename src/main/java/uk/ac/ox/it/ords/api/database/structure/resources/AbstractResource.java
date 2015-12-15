@@ -20,51 +20,104 @@ import javax.ws.rs.core.Response;
 
 import org.apache.shiro.SecurityUtils;
 
+import uk.ac.ox.it.ords.api.database.structure.exceptions.BadParameterException;
+import uk.ac.ox.it.ords.api.database.structure.exceptions.NamingConflictException;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
+import uk.ac.ox.it.ords.api.database.structure.services.ColumnStructureService;
+import uk.ac.ox.it.ords.api.database.structure.services.CommentService;
+import uk.ac.ox.it.ords.api.database.structure.services.ConstraintService;
+import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
+import uk.ac.ox.it.ords.api.database.structure.services.IndexService;
+import uk.ac.ox.it.ords.api.database.structure.services.TableStructureService;
 
 public class AbstractResource {
 
-	protected boolean canModifyDatabase ( int dbId ) {
+	protected boolean canModifyDatabase(int dbId) {
 		return SecurityUtils.getSubject().isPermitted(
-				DatabaseStructurePermissions.DATABASE_MODIFY(dbId)
-				);
+				DatabaseStructurePermissions.DATABASE_MODIFY(dbId));
 	}
-	
-	protected boolean canViewDatabase ( int dbId ) {
+
+	protected boolean canViewDatabase(int dbId) {
 		return SecurityUtils.getSubject().isPermitted(
-				DatabaseStructurePermissions.DATABASE_VIEW(dbId)
-				);
+				DatabaseStructurePermissions.DATABASE_VIEW(dbId));
+	}
+
+	protected Response forbidden() {
+		return Response.status(Response.Status.FORBIDDEN).build();
+	}
+
+	// Convenience methods to return services
+	
+	protected IndexService indexServiceInstance() {
+		return IndexService.Factory.getInstance();
+	}
+
+	
+	protected ConstraintService constraintServiceInstance ( ) {
+		return ConstraintService.Factory.getInstance();
+	}
+
+	
+	protected CommentService commentServiceInstance( ) {
+		return CommentService.Factory.getInstance();
+	}
+
+	
+	protected ColumnStructureService columnServiceInstance() {
+		return ColumnStructureService.Factory.getInstance();
 	}
 	
-	protected Response forbidden ( ) {
-		return Response.status( Response.Status.FORBIDDEN).build();
+
+	protected TableStructureService tableServiceInstance() {
+		return TableStructureService.Factory.getInstance();
 	}
 	
-	   public static class BooleanCheck {
-	        private static final BooleanCheck FALSE = new BooleanCheck(false);
-	        private static final BooleanCheck TRUE = new BooleanCheck(true);
-	        private boolean value;
+	
+	protected DatabaseStructureService databaseServiceInstance ( ) {
+		return DatabaseStructureService.Factory.getInstance();
+	}
+	
+	// A way of handing exceptions and returning a valid status code
+	
+	protected Response handleException ( Exception e ) {
+		if ( e instanceof BadParameterException ) {
+			return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+		}
+		else if ( e instanceof NamingConflictException ) {
+			return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
+		}
+		else {
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+		}
+	}
+	
+	
+	// checks for a number of possible permutations for the staging part of the resource path
+	public static class BooleanCheck {
+		private static final BooleanCheck FALSE = new BooleanCheck(false);
+		private static final BooleanCheck TRUE = new BooleanCheck(true);
+		private boolean value;
 
-	        private BooleanCheck(boolean value) {
-	            this.value = value;
-	        }
+		private BooleanCheck(boolean value) {
+			this.value = value;
+		}
 
-	        public boolean getValue() {
-	            return this.value;
-	        }
+		public boolean getValue() {
+			return this.value;
+		}
 
-	        public static BooleanCheck valueOf(String value) {
-	            switch (value.toLowerCase()) {
-	                case "true":
-	                case "yes":
-	                case "y":
-	                case "staging":{
-	                    return BooleanCheck.TRUE;
-	                }
-	                default: {
-	                    return BooleanCheck.FALSE;
-	                }
-	            }
-	        }
-	    }
+		public static BooleanCheck valueOf(String value) {
+			switch (value.toLowerCase()) {
+				case "true" :
+				case "yes" :
+				case "y" :
+				case "staging" : {
+					return BooleanCheck.TRUE;
+				}
+				default : {
+					return BooleanCheck.FALSE;
+				}
+			}
+		}
+	}
 }

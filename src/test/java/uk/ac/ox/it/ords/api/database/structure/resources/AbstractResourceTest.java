@@ -241,12 +241,7 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		//
 		// Add our REST resources to the server
 		//
-		resources.add(new SingletonResourceProvider(new Column(), true));
-		resources.add(new SingletonResourceProvider(new Comment(), true));
-		resources.add(new SingletonResourceProvider(new Constraint(), true));
 		resources.add(new SingletonResourceProvider(new Database(), true));
-		resources.add(new SingletonResourceProvider(new Index(), true));
-		resources.add(new SingletonResourceProvider(new Table(), true));
 		
 		sf.setResourceProviders(resources);
 		

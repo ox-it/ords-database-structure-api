@@ -14,29 +14,14 @@
  * limitations under the License.
  */
 
-package uk.ac.ox.it.ords.api.database.structure.metadata;
-
-import java.util.ArrayList;
+package uk.ac.ox.it.ords.api.database.structure.dto;
 
 
-public class IndexRequest {
+public class TableRenameRequest {
     /**
-     * The new name for the index, if it's being renamed
+     * The new name of the table
      */
     private String newname;
-
-    /**
-     * True if this is a unique index, false if not
-     */
-    private Boolean unique;
-
-    /**
-     * The columns in the table referenced by the URL that are being indexed
-     */
-    private ArrayList<String> columns;
-
-    public IndexRequest() {
-    }
 
     public String getNewname() {
         return newname;
@@ -46,20 +31,5 @@ public class IndexRequest {
         this.newname = newname;
     }
 
-    public Boolean isUnique() {
-        return unique;
-    }
-
-    public void setUnique(Boolean unique) {
-        this.unique = unique;
-    }
-
-    public ArrayList<String> getColumns() {
-        return columns;
-    }
-
-    public void setColumns(ArrayList<String> columns) {
-        this.columns = columns;
-    }
-
+    public TableRenameRequest() {};
 }

@@ -36,41 +36,82 @@ import javax.ws.rs.core.UriInfo;
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.shiro.SecurityUtils;
 
+import uk.ac.ox.it.ords.api.database.structure.dto.ColumnRequest;
+import uk.ac.ox.it.ords.api.database.structure.dto.CommentRequest;
+import uk.ac.ox.it.ords.api.database.structure.dto.ConstraintRequest;
+import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
+import uk.ac.ox.it.ords.api.database.structure.dto.IndexRequest;
+import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
+import uk.ac.ox.it.ords.api.database.structure.dto.TableRenameRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
+import uk.ac.ox.it.ords.api.database.structure.resources.AbstractResource.BooleanCheck;
+import uk.ac.ox.it.ords.api.database.structure.services.ColumnStructureService;
+import uk.ac.ox.it.ords.api.database.structure.services.CommentService;
+import uk.ac.ox.it.ords.api.database.structure.services.ConstraintService;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
+import uk.ac.ox.it.ords.api.database.structure.services.IndexService;
+import uk.ac.ox.it.ords.api.database.structure.services.MessageEntity;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
+import uk.ac.ox.it.ords.api.database.structure.services.TableStructureService;
 
-@Path("/database")
+@Path("/")
 public class Database extends AbstractResource{
 	
 	@PostConstruct
 	public void init() throws Exception {
-		serviceInstance().init();
+		databaseServiceInstance().init();
 	}
+
 	
-	
+	/********************************************************
+	 * Database Resources
+	 ********************************************************/
+
+
 	@GET
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response getDatabases ( ) {
+		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_VIEW_PUBLIC)) {
+			return forbidden();
+		}
 		List<OrdsPhysicalDatabase> databaseList;
 		try {
-			databaseList = serviceInstance().getDatabaseList();
+			databaseList = databaseServiceInstance().getDatabaseList();
 		}
 		catch ( Exception e ) {
-			// TODO: Handle exception properly and give a meaningful message to the user.
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+			return this.handleException(e);
 		}
 		return Response.ok(databaseList).build();
 	}
 	
+
+	@GET
+	@Path("{id}/{instance}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getDatabaseMetadata ( 	@PathParam("id") int dbId,
+											@PathParam("instance") String instance) {
+		TableList tableList;
+		if (!SecurityUtils.getSubject().isPermitted(
+				DatabaseStructurePermissions.DATABASE_VIEW(dbId))) {
+			return forbidden();
+		}
+		try {
+			tableList =  databaseServiceInstance().getDatabaseTableList(dbId, instance, false);
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+		return Response.ok(tableList).build();
+	}
+
 	
 	@POST
-	@Path("{groupId}/{instance}")
+	@Path("{id}/{instance}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response createDatabase ( @PathParam("groupId") int groupId,
+	public Response createDatabase ( @PathParam("id") int id,
 										@PathParam("instance") String instance,
-										@Context UriInfo uriInfo){
+										DatabaseRequest databaseDTO){
 		
 		OrdsPhysicalDatabase newDatabase;
 		if ( !SecurityUtils.getSubject().isPermitted(
@@ -78,77 +119,13 @@ public class Database extends AbstractResource{
 			return forbidden();
 		}
 		try {
-			newDatabase =  serviceInstance().createNewDatabase(groupId, instance);
-		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
-		    builder.path(Integer.toString(newDatabase.getPhysicalDatabaseId()));
-		    return Response.created(builder.build()).build();
+			newDatabase =  databaseServiceInstance().createNewDatabase(id, databaseDTO, instance);
+		    //UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+		    //builder.path(Integer.toString(newDatabase.getPhysicalDatabaseId()));
+		    return Response.status(Response.Status.CREATED).entity(newDatabase).build();
 		}
 		catch ( Exception e ) {
-			// TODO: proper exception handling!
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-		}
-	}
-	
-
-	
-	@GET
-	@Path("{id}/{instance}/{staging}")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response getDatabaseMetadata ( 	@PathParam("id") int dbId,
-											@PathParam("instance") String instance,
-											@PathParam("staging") BooleanCheck staging) {
-		TableList tableList;
-		if (!SecurityUtils.getSubject().isPermitted(
-				DatabaseStructurePermissions.DATABASE_VIEW(dbId))) {
-			return forbidden();
-		}
-		try {
-			tableList =  serviceInstance().getDatabaseTableList(dbId, instance, staging.getValue());
-		}
-		catch ( Exception e ) {
-			// TODO:
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-		}
-		return Response.ok(tableList).build();
-	}
-	
-	@POST
-	@Path("{id}/{instance}/staging")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response createStagingDatabase (
-			@PathParam("id") int dbId,
-			@PathParam("instance") String instance ) {
-		
-		if (!canModifyDatabase(dbId)) {
-			return forbidden();		
-		}
-		try {
-			String dbName = serviceInstance().createNewStagingDatabase(dbId, instance);
-			return Response.ok(dbName).build();
-		}
-		catch ( Exception e ) {
-			// TODO:
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-		}
-	}
-	
-	
-	@PUT
-	@Path("{id}/{instance}/staging")
-	@Consumes(MediaType.APPLICATION_JSON)
-	public Response updateDatabaseMetadata (
-			@PathParam("id") int dbId,
-			@PathParam("instance") String instance ) {
-		
-		if (!canModifyDatabase(dbId)) {
-			return forbidden();		
-		}
-		try {
-			serviceInstance().mergeStagingToActual(dbId, instance);
-			return Response.ok().build();
-		}
-		catch ( Exception e ) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+			return this.handleException(e);
 		}
 	}
 	
@@ -165,13 +142,76 @@ public class Database extends AbstractResource{
 			return forbidden();		
 		}
 		try {
-			serviceInstance().deleteDatabase(dbId, instance, false);
+			databaseServiceInstance().deleteDatabase(dbId, instance, false);
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+			return this.handleException(e);
 		}
 	}
+	
+
+	
+
+// staging version resource	
+	@GET
+	@Path("{id}/{instance}/staging")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getStagingDatabaseMetadata ( 	@PathParam("id") int dbId,
+											@PathParam("instance") String instance) {
+		TableList tableList;
+		if (!SecurityUtils.getSubject().isPermitted(
+				DatabaseStructurePermissions.DATABASE_VIEW(dbId))) {
+			return forbidden();
+		}
+		try {
+			tableList =  databaseServiceInstance().getDatabaseTableList(dbId, instance, true);
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+		return Response.ok(tableList).build();
+	}
+	
+	@POST
+	@Path("{id}/{instance}/staging")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response createStagingDatabase (
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance ) {
+		
+		if (!canModifyDatabase(dbId)) {
+			return forbidden();		
+		}
+		try {
+			String dbName = databaseServiceInstance().createNewStagingDatabase(dbId, instance);
+			return Response.ok(dbName).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	
+	@PUT
+	@Path("{id}/{instance}/staging")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response updateDatabaseMetadata (
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance ) {
+		
+		if (!canModifyDatabase(dbId)) {
+			return forbidden();		
+		}
+		try {
+			databaseServiceInstance().mergeStagingToActual(dbId, instance);
+			return Response.ok().build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
 	
 	
 	@DELETE
@@ -185,30 +225,572 @@ public class Database extends AbstractResource{
 			return forbidden();		
 		}
 		try {
-			serviceInstance().deleteDatabase(dbId, instance, true);
+			databaseServiceInstance().deleteDatabase(dbId, instance, true);
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+			return this.handleException(e);
 		}
 		
 	}
 	
-	@POST
-	@Path("{id}/{instance}/data")
-	@Consumes(MediaType.MULTIPART_FORM_DATA)
-	public Response handleFileUpload ( @PathParam("id") int dbId,
+	
+	
+	/********************************************************
+	 * Schema Designer Table Position
+	 * TODO: This needs it's own microservice really
+	 *******************************************************/
+	@PUT
+	@Path("{id}/{instance}/positions")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response saveTablePositions (
+			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
-			List<Attachment> attachments) {
-		if (!canModifyDatabase(dbId)) {
-			return forbidden();		
+			PositionRequest request) {
+		if ( !SecurityUtils.getSubject().isPermitted(
+				DatabaseStructurePermissions.DATABASE_MODIFY(dbId))) {
+			return forbidden();
 		}
-		return Response.ok().build();
+		try {
+			this.tableServiceInstance().setTablePositions(dbId, instance, request);
+			return Response.ok().build();
+		}
+		catch( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+
+	/********************************************************
+	 * Table Resources
+	 ********************************************************/
+	
+	
+	@GET
+	@Path("{id}/{instance}/table/{tablename}/{staging}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getTableMetadata ( 
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("staging") BooleanCheck staging ) {
+		
+		if (!canViewDatabase(dbId)){
+			return forbidden();
+		}
+		try {
+			TableList tableList = tableServiceInstance().getTableMetadata(
+					dbId, instance, tableName, staging.getValue());
+			return Response.ok(tableList).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
 	}
 	
 	
-	private DatabaseStructureService serviceInstance ( ) {
-		return DatabaseStructureService.Factory.getInstance();
+	@POST
+	@Path("{id}/{instance}/table/{tablename}/{staging}")
+	public Response createNewTable ( 
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("staging") BooleanCheck staging,
+			@Context UriInfo uriInfo ) {
+		
+		if (!canModifyDatabase(dbId)){
+			return forbidden();
+		}
+		try {
+			tableServiceInstance().createNewTable(dbId, instance, tableName, staging.getValue());
+		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+		    builder.path(tableName);
+		    return Response.created(builder.build()).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}		
 	}
+	
+	
+	@PUT
+	@Path("{id}/{instance}/table/{tablename}/{staging}")
+	public Response updateTableName ( 
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("staging") BooleanCheck staging,
+			TableRenameRequest request) {
+		
+		if(!canModifyDatabase(dbId)){
+			return forbidden();
+		}
+		try {
+			tableServiceInstance().renameTable(dbId, instance, tableName, request.getNewname(), staging.getValue());
+			return Response.ok().build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	
+	
+	@DELETE
+	@Path("{id}/{instance}/table/{tablename}/{staging}")
+	public Response deleteTable ( 
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("staging") BooleanCheck staging ) {
+		
+		if(!canModifyDatabase(dbId)){
+			return forbidden();
+		}
+		try {
+			tableServiceInstance().deleteTable(dbId, instance, tableName, staging.getValue() );
+			return Response.ok().build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}	
+	
+	
+
+	/********************************************************
+	 * Column Resources
+	 ********************************************************/
+
+	@GET
+	@Path("{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getColumnMetadata (
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("colname") String columnName,
+			@PathParam("staging") BooleanCheck staging) {
+		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_VIEW(dbId))) {
+			//TODO add audit service
+			return Response.status(403).build();
+		}
+		try {
+			ColumnRequest metadata = columnServiceInstance().getColumnMetadata(
+					dbId, 
+					instance, 
+					tableName, 
+					columnName,
+					staging.getValue());
+			if (metadata == null ) {
+				return Response.status(Response.Status.NOT_FOUND).build();
+			}
+			return Response.ok(metadata).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	@POST
+	@Path("{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response createColumn (
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("colname") String columnName,
+			@PathParam("staging") BooleanCheck staging,
+			ColumnRequest newColumn,
+			@Context UriInfo uriInfo ) {
+
+		if (!canModifyDatabase(dbId)) {
+			//TODO add audit service
+			return forbidden();
+		}		
+		try {
+			columnServiceInstance().createColumn(dbId, instance, tableName, columnName, newColumn, staging.getValue());
+		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+		    builder.path(tableName);
+		    return Response.created(builder.build()).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	
+	@PUT
+	@Path("{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response updateColumn (
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("colname") String columnName,
+			@PathParam("staging") BooleanCheck staging,
+			ColumnRequest newColumn) {
+
+		if (!canModifyDatabase(dbId)) {
+			//TODO add audit service
+			return forbidden();
+		}		try {
+			columnServiceInstance().updateColumn(dbId, instance, tableName, columnName, newColumn, staging.getValue());
+			return Response.ok().build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	
+	@DELETE
+	@Path("{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
+	public Response deleteColumn (
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("colname") String columnName,
+			@PathParam("staging") BooleanCheck staging ) {
+
+		if (!canModifyDatabase(dbId)) {
+			//TODO add audit service
+			return forbidden();
+		}
+		try {
+			columnServiceInstance().deleteColumn(dbId, instance, tableName, columnName, staging.getValue());
+			return Response.ok().build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}		
+	}
+	
+	
+	/********************************************************
+	 * Comment Resources
+	 ********************************************************/
+
+	@GET
+	@Path("{id}/{instance}/table/{tablename}/comment/{staging}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getTableComment ( 
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("staging") BooleanCheck staging ) {
+		
+		if ( !canViewDatabase ( dbId ) ) {
+			return forbidden();
+		}
+		try {
+			CommentRequest comment = new CommentRequest();
+			comment.setComment(
+					commentServiceInstance().getTableComment(dbId, instance, tableName, staging.getValue()));
+			return Response.ok(comment).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	
+	@POST
+	@PUT
+	@Path("{id}/{instance}/table/{tablename}/comment/{staging}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response setTableComment (
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("staging") BooleanCheck staging,
+			CommentRequest newComment,
+			@Context UriInfo uriInfo ) {
+		
+		if ( !canModifyDatabase( dbId )) {
+			return forbidden();
+		}
+		try {
+			commentServiceInstance().setTableComment(dbId, instance, tableName, newComment.getComment(), staging.getValue());
+		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+		    builder.path(tableName);
+		    return Response.created(builder.build()).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	
+	@GET
+	@Path("{id}/{instance}/table/{tablename}/column/{columnName}/comment/{staging}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getColumnComment ( 
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("columnName") String columnName,
+			@PathParam("staging") BooleanCheck staging ) {
+		
+		if ( !canViewDatabase( dbId )) {
+			return forbidden();
+		}
+		try {
+			CommentRequest comment = new CommentRequest();
+			comment.setComment(
+					commentServiceInstance().getColumnComment(dbId, instance, tableName, columnName, staging.getValue()));
+			return Response.ok(comment).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	
+	@POST
+	@PUT
+	@Path("{id}/{instance}/table/{tablename}/column/{columnName}/comment/{staging}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response setColumnComment (
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("columnName") String columnName,
+			@PathParam("staging") BooleanCheck staging, 
+			CommentRequest newComment,
+			@Context UriInfo uriInfo ) {
+		
+		if ( !canModifyDatabase ( dbId ) ) {
+			return forbidden();
+		}
+		try {
+			commentServiceInstance().setColumnComment(
+					dbId,
+					instance,
+					tableName,
+					columnName,
+					newComment.getComment(), 
+					staging.getValue());
+		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+		    builder.path("created");
+		    return Response.created(builder.build()).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}	
+
+	
+	/********************************************************
+	 * Constraint Resources
+	 ********************************************************/
+
+	@GET
+	@Path("{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getTableConstraint ( 
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("conname") String constraintName,
+			@PathParam("staging") BooleanCheck staging ) {
+		
+		if (!canViewDatabase( dbId) ) {
+			return forbidden();
+		}
+		try {
+			MessageEntity e = constraintServiceInstance().getConstraint(
+					dbId, 
+					instance, 
+					tableName, 
+					constraintName,
+					staging.getValue()
+					);
+			return Response.ok(e).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	
+	@POST
+	@Path("{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response createTableConstraint ( 
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("conname") String constraintName,
+			@PathParam("staging") BooleanCheck staging,
+			ConstraintRequest constraint,
+			@Context UriInfo uriInfo  ) {
+		
+		if (!canModifyDatabase( dbId ) ) {
+			return forbidden();
+		}
+		try {
+			constraintServiceInstance().createConstraint(dbId, instance, tableName, constraintName, constraint,
+					staging.getValue());
+		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+		    builder.path(constraintName);
+		    return Response.created(builder.build()).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}	
+	}
+	
+	
+	@PUT
+	@Path("{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response updateTableConstraint ( 
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("conname") String constraintName,
+			@PathParam("staging") BooleanCheck staging,
+			ConstraintRequest constraint ) {
+		if (!canModifyDatabase( dbId ) ) {
+			return forbidden();
+		}
+		try {
+			constraintServiceInstance().updateConstraint(dbId, instance, tableName,constraintName, constraint,
+					staging.getValue());
+			return Response.ok().build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}	
+	}
+	
+	
+	@DELETE
+	@Path("/constraint/database/{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
+	public Response deleteTableConstraint ( 
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("conname") String constraintName,
+			@PathParam("staging") BooleanCheck staging ) {
+		if (!canModifyDatabase( dbId ) ) {
+			return forbidden();
+		}
+		try {
+			constraintServiceInstance().deleteConstraint(dbId, instance, tableName, constraintName,
+					staging.getValue());
+			return Response.ok().build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}		
+	}
+	
+	
+	
+	/********************************************************
+	 * Index Resources
+	 ********************************************************/
+	
+	@GET
+	@Path("{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getNamedIndex (  
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("indexname") String indexName,
+			@PathParam("staging") BooleanCheck staging ) {
+		
+		if (!canViewDatabase(dbId)){
+			return forbidden();
+		}
+		try {
+			MessageEntity index = indexServiceInstance().getIndex(dbId, instance, tableName, indexName,
+					staging.getValue());
+			return Response.ok(index).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	
+	@POST
+	@Path("{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response createIndex (  
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("indexname") String indexName,
+			@PathParam("staging") BooleanCheck staging,
+			IndexRequest newIndex,
+			@Context UriInfo uriInfo ) {
+		
+		if(!canModifyDatabase(dbId)) {
+			return forbidden();
+		}
+		try {
+			indexServiceInstance().createIndex(dbId, instance, tableName, indexName, newIndex,
+					staging.getValue());
+		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+		    builder.path(indexName);
+		    return Response.created(builder.build()).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	@PUT
+	@Path("{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response updateIndex (  
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("indexname") String indexName,
+			@PathParam("staging") BooleanCheck staging,
+			IndexRequest newIndex ) {
+		if(!canModifyDatabase(dbId)){
+			return forbidden();
+		}
+		try {
+			indexServiceInstance().updateIndex(dbId, instance, tableName, indexName, newIndex,
+					staging.getValue());
+			return Response.ok().build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	
+	@DELETE
+	@Path("{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
+	public Response deleteIndex (  
+			@PathParam("id") int dbId,
+			@PathParam("instance") String instance,
+			@PathParam("tablename") String tableName,
+			@PathParam("indexname") String indexName,
+			@PathParam("staging") BooleanCheck staging) {
+		
+		if(!canModifyDatabase(dbId)){
+			forbidden();
+		}
+		try {
+			indexServiceInstance().deleteIndex(dbId, instance, tableName, indexName,
+					staging.getValue());
+			return Response.ok().build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	
 	
 }

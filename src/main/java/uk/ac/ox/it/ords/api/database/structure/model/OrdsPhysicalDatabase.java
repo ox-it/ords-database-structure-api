@@ -52,7 +52,9 @@ public class OrdsPhysicalDatabase implements Cloneable {
     private boolean dbConsumed;
     @Column(name = "dbconsumedname", unique = true)
     private String dbConsumedName;
-
+    
+    private String databaseServer;
+    
     @NotNull
     private String uuid;
 
@@ -262,5 +264,13 @@ public class OrdsPhysicalDatabase implements Cloneable {
     public void setUploadedHost(String uploadedHost) {
         this.uploadedHost = uploadedHost;
     }
+
+	public String getDatabaseServer() {
+		return databaseServer;
+	}
+
+	public void setDatabaseServer(String databaseServer) {
+		this.databaseServer = databaseServer;
+	}
     
 }

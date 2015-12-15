@@ -19,6 +19,7 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.*;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.DatabaseStructureServiceImpl;
 
@@ -43,7 +44,7 @@ public interface DatabaseStructureService {
 	 * @return
 	 * @throws Exception
 	 */
-	public OrdsPhysicalDatabase createNewDatabase ( int logicalDBId , String instance) throws Exception;
+	public OrdsPhysicalDatabase createNewDatabase ( int logicalDBId , DatabaseRequest databaseDTO, String instance) throws Exception;
 	
 	/**
 	 * Gets the metadata for a specific database

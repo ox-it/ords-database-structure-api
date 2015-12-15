@@ -14,23 +14,29 @@
  * limitations under the License.
  */
 
+package uk.ac.ox.it.ords.api.database.structure.dto;
 
-package uk.ac.ox.it.ords.api.database.structure.metadata;
+public class DatabaseRequest {
+	private String databaseName;
+	private String databaseServer;
+	private int groupId;
 
-
-public class CommentRequest {
-    /**
-     * The text of the comment to be set
-     */
-    private String comment;
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
-    }
-    
-    public CommentRequest() {}
+	public String getDatabaseName() {
+		return databaseName;
+	}
+	public void setDatabaseName(String databaseName) {
+		this.databaseName = databaseName;
+	}
+	public String getDatabaseServer() {
+		return databaseServer;
+	}
+	public void setDatabaseServer(String databaseServer) {
+		this.databaseServer = databaseServer;
+	}
+	public int getGroupId() {
+		return groupId;
+	}
+	public void setGroupId(int groupId) {
+		this.groupId = groupId;
+	}
 }

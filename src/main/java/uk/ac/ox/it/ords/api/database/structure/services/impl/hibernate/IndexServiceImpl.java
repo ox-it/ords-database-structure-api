@@ -23,8 +23,9 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang.StringUtils;
 
+import uk.ac.ox.it.ords.api.database.structure.dto.IndexRequest;
 import uk.ac.ox.it.ords.api.database.structure.exceptions.BadParameterException;
-import uk.ac.ox.it.ords.api.database.structure.metadata.IndexRequest;
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.services.IndexService;
 import uk.ac.ox.it.ords.api.database.structure.services.MessageEntity;
 
@@ -37,8 +38,13 @@ public class IndexServiceImpl extends StructureServiceImpl
 			String indexName, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
-		if ( !this.checkIndexExists(tableName, indexName, databaseName, userName, password)){
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
+		if ( !this.checkIndexExists(tableName, indexName, databaseName, server, userName, password)){
 			throw new NotFoundException("");
 		}
 		return new MessageEntity(indexName);

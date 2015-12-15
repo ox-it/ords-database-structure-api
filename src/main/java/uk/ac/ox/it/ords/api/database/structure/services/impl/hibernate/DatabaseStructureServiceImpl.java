@@ -27,6 +27,7 @@ import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
 
+import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.EntityType;
 import uk.ac.ox.it.ords.api.database.structure.model.User;
@@ -117,12 +118,12 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	}
 
 	@Override
-	public OrdsPhysicalDatabase createNewDatabase(int logicalDBId,
+	public OrdsPhysicalDatabase createNewDatabase(int id, DatabaseRequest databaseDTO,
 			String instance) throws Exception {
 		String username = this.getODBCUserName();
 		String password = this.getODBCPassword();
 		this.createOBDCUserRole(username, password);
-		OrdsPhysicalDatabase db = this.createEmptyDatabase(logicalDBId,
+		OrdsPhysicalDatabase db = this.createEmptyDatabase(id, databaseDTO,
 				username, password);
 		DatabaseStructureRoleService.Factory.getInstance()
 				.createInitialPermissions(db.getPhysicalDatabaseId());
@@ -166,15 +167,12 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		String password = this.getODBCPassword();
 		// we need to get the physical database this time because we need it's
 		// id later
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(
-				dbId, instance);
-		String databaseName;
-		if (!staging) {
-			databaseName = database.getDbConsumedName();
-		} else {
-			databaseName = this.calculateStagingName(database
-					.getDbConsumedName());
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
 		}
+		String server = database.getDatabaseServer();
 
 		String query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name";
 		// getting a single scalar value so hibernate returns a list of strings
@@ -199,9 +197,9 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 			// get the schema designer table for this table
 			SchemaDesignerTable sdt = this.getSchemaDesignerTable(
 					database.getPhysicalDatabaseId(), tableName.toString());
-			String comment = this.tableComment(databaseName, databaseName);
+			String comment = this.tableComment(databaseName, server, databaseName);
 			tables.addTable(tableName, comment);
-			addTableMetadata(databaseName, tableName, tables);
+			addTableMetadata(databaseName, server, tableName, tables);
 			if (sdt == null) {
 				tables.setXY(tableName, counter * multiplier, counter
 						* multiplier);
@@ -216,6 +214,8 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	@Override
 	public String createNewStagingDatabase(int dbId, String instance)
 			throws Exception {
+		String userName = this.getODBCUserName();
+		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(
 				dbId, instance);
 		String stagingName = this.calculateStagingName(database
@@ -228,10 +228,10 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 				quote_ident(stagingName),
 				quote_ident(database.getDbConsumedName()));
 		this.runSQLStatement(clonedb, null, null, null);
-		// String sequenceName = "ords_constraint_seq";
-		// String createSequence = String.format("CREATE SEQUENCE %s",
-		// quote_ident(sequenceName));
-		// this.runSQLStatement(createSequence, null, null, null);
+//		String sequenceName = "ords_constraint_seq";
+//		String createSequence = String.format("CREATE SEQUENCE %s",
+//		quote_ident(sequenceName));
+//		this.runSQLStatement(createSequence, stagingName, userName, password);
 		return stagingName;
 	}
 
@@ -299,11 +299,15 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		}
 	}
 
-	private OrdsPhysicalDatabase createEmptyDatabase(int logicalDatabaseId,
+	private OrdsPhysicalDatabase createEmptyDatabase(int id, DatabaseRequest databaseDTO,
 			String userName, String password) throws Exception {
 		log.debug("createEmptyDatabase");
 		OrdsPhysicalDatabase db = new OrdsPhysicalDatabase();
-		db.setLogicalDatabaseId(logicalDatabaseId);
+		if ( id != 0 ) {
+			db.setPhysicalDatabaseId(id);
+		}
+		db.setLogicalDatabaseId(databaseDTO.getGroupId());
+		db.setDatabaseServer(databaseDTO.getDatabaseServer());
 		db.setImportProgress(OrdsPhysicalDatabase.ImportType.FINISHED);
 		db.setEntityType(EntityType.MAIN);
 		db.setFileName("none");
@@ -323,6 +327,12 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 					dbName, userName);
 
 			this.runSQLStatement(statement, null, null, null);
+			String sequenceName = "ords_constraint_seq";
+			String createSequence = "CREATE SEQUENCE ?";
+			List<Object> parameters = this.createParameterList(sequenceName);
+			String server = db.getDatabaseServer();
+			this.runJDBCQuery(createSequence, parameters, server, dbName);
+
 			return db;
 		}
 	}

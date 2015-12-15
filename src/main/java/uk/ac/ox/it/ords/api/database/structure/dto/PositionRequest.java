@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.ac.ox.it.ords.api.database.structure.metadata;
+package uk.ac.ox.it.ords.api.database.structure.dto;
 
 import java.util.ArrayList;
 

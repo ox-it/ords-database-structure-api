@@ -18,7 +18,7 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 
 import java.util.ServiceLoader;
 
-import uk.ac.ox.it.ords.api.database.structure.metadata.IndexRequest;
+import uk.ac.ox.it.ords.api.database.structure.dto.IndexRequest;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.IndexServiceImpl;
 
 public interface IndexService {

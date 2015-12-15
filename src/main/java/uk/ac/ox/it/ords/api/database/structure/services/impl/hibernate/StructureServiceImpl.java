@@ -16,6 +16,7 @@
 
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
+import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -27,7 +28,9 @@ import java.util.List;
 import java.util.Properties;
 
 import javax.sql.rowset.CachedRowSet;
+import javax.sql.rowset.RowSetProvider;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.SecurityUtils;
@@ -40,8 +43,6 @@ import org.hibernate.criterion.Restrictions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.rowset.CachedRowSetImpl;
-
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.EntityType;
@@ -50,11 +51,13 @@ import uk.ac.ox.it.ords.api.database.structure.services.ServerConfigurationServi
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
 
-
 public class StructureServiceImpl {
 	Logger log = LoggerFactory.getLogger(StructureServiceImpl.class);
 	protected static String ODBC_MASTER_PASSWORD_PROPERTY = "ords.odbc.masterpassword";
-
+	protected static String ORDS_DATABASE_NAME = "ords.database.name";
+	protected static String ORDS_DATABASE_USER = "ords.database.username";
+	protected static String ORDS_DATABASE_PASSWORD = "ords.database.password";
+	protected static String ORDS_DATABASE_HOST = "ords.database.server.host";
 
 	private SessionFactory sessionFactory;
 
@@ -90,100 +93,47 @@ public class StructureServiceImpl {
 	 */
 	public SessionFactory getUserDBSessionFactory(String dbName,
 			String userName, String password) {
-		// TODO: this needs back in 
 		return HibernateUtils.getUserDBSessionFactory(dbName, userName,
 				password);
 
 	}
-	
-	
-	protected OrdsPhysicalDatabase getPhysicalDatabaseFromIDInstance ( int dbId, String instance){
-		//EntityType dbType = OrdsPhysicalDatabase.EntityType.valueOf(instance
-		//		.toUpperCase());
-		//OrdsPhysicalDatabase database = this
-		//		.getPhysicalDatabaseByLogicalDatabaseId(dbId, dbType);
+
+	protected OrdsPhysicalDatabase getPhysicalDatabaseFromIDInstance(int dbId,
+			String instance) {
+		// EntityType dbType = OrdsPhysicalDatabase.EntityType.valueOf(instance
+		// .toUpperCase());
+		// OrdsPhysicalDatabase database = this
+		// .getPhysicalDatabaseByLogicalDatabaseId(dbId, dbType);
 		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
-			
+
 			@SuppressWarnings("unchecked")
-			List<OrdsPhysicalDatabase> users = (List<OrdsPhysicalDatabase>) session.createCriteria(OrdsPhysicalDatabase.class).add(Restrictions.eq("physicalDatabaseId", dbId)).list();
+			List<OrdsPhysicalDatabase> users = (List<OrdsPhysicalDatabase>) session
+					.createCriteria(OrdsPhysicalDatabase.class)
+					.add(Restrictions.eq("physicalDatabaseId", dbId)).list();
 			transaction.commit();
-			if (users.size() == 1){
+			if (users.size() == 1) {
 				return users.get(0);
-			} 
+			}
 			return null;
 		} catch (Exception e) {
 			session.getTransaction().rollback();
 			throw e;
-		}
-		finally {
+		} finally {
 			session.close();
 		}
 	}
-	
-	
 
-
-	public String dbNameFromIDInstance(int dbID, String instance, boolean staging) {
-		OrdsPhysicalDatabase database = getPhysicalDatabaseFromIDInstance(dbID, instance);
-		if ( !staging ) {
+	public String dbNameFromIDInstance(int dbID, String instance,
+			boolean staging) {
+		OrdsPhysicalDatabase database = getPhysicalDatabaseFromIDInstance(dbID,
+				instance);
+		if (!staging) {
 			return database.getDbConsumedName();
-		}
-		else {
+		} else {
 			return this.calculateStagingName(database.getDbConsumedName());
 		}
-	}
-	
-	
-
-
-	private OrdsPhysicalDatabase getPhysicalDatabaseByLogicalDatabaseId(
-			int logicalDatabaseId, EntityType entityType) {
-		if (log.isDebugEnabled()) {
-			log.debug(String.format(
-					"getPhysicalDatabaseByLogicalDatabaseId(%d, %s)",
-					logicalDatabaseId, entityType));
-		}
-
-		Transaction tx = null;
-		Session session = this.sessionFactory.openSession();
-		try {
-			tx = session.beginTransaction();
-			SQLQuery q = session
-					.createSQLQuery(
-							"select * from ordsPhysicalDatabase where logicalDatabaseId=:logicalDatabaseId and entityType=:entityType")
-					.addEntity(OrdsPhysicalDatabase.class);
-			q.setParameter("logicalDatabaseId", logicalDatabaseId);
-			q.setParameter("entityType", entityType.ordinal());
-			@SuppressWarnings("unchecked")
-			List<OrdsPhysicalDatabase> databases = q.list();
-			tx.commit();
-			if ((databases != null) && (!databases.isEmpty())) {
-				log.debug("return item");
-				if (databases.size() > 1) {
-					log.error(String
-							.format("Too many entries (%d) exist for this. Selecting one of them. This should never happen!",
-									databases.size()));
-				}
-				return databases.get(0);
-			}
-		} catch (HibernateException e) {
-			log.error("Run time exception", e);
-			if (tx != null && tx.isActive()) {
-				try {
-					tx.rollback();
-				} catch (HibernateException e1) {
-				}
-				throw e;
-			}
-		}
-		finally {
-			session.close();
-		}
-
-		log.debug("getDatabase: return null");
-		return null;
 	}
 
 	/**
@@ -206,39 +156,34 @@ public class StructureServiceImpl {
 	 * @throws ConfigurationException
 	 */
 	public String getODBCPassword() throws ConfigurationException {
-		return MetaConfiguration.getConfiguration().getString(StructureServiceImpl.ODBC_MASTER_PASSWORD_PROPERTY);
+		return MetaConfiguration.getConfiguration().getString(
+				StructureServiceImpl.ODBC_MASTER_PASSWORD_PROPERTY);
 	}
-	
-	
-	public String getFirstServer ( ) throws Exception {
-		return HibernateUtils.getFirstDBServer();
+
+	public String getORDSDatabaseName() throws ConfigurationException {
+		return MetaConfiguration.getConfiguration().getString(
+				StructureServiceImpl.ORDS_DATABASE_NAME);
 	}
-	
-	
-	public boolean checkDatabaseExists(String databaseName ) throws Exception {
-		String sql = "SELECT COUNT(*) as count from pg_database WHERE datname = %s";
-		sql = String.format(sql, quote_literal(databaseName));
-		return this.runCountSql(sql, null, null, null) == 1;
-/*		Session session = this.getOrdsDBSessionFactory().getCurrentSession();
-		try {
-			Transaction transaction = session.beginTransaction();
-			SQLQuery query = session.createSQLQuery(sql);
-			@SuppressWarnings("rawtypes")
-			List results = query.list();
-			transaction.commit();
-			if(results.size() == 0 ) {
-				return false;
-			}
-			else {
-				return true;
-			}
-		}
-		catch (Exception e) {
-			log.debug(e.getMessage());
-			session.getTransaction().rollback();
-			throw e;
-		}
-*/	}
+
+	public String getDatabaseServer( int dbId, String instance ) throws Exception {
+		OrdsPhysicalDatabase pdb = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		return pdb.getDatabaseServer();
+	}
+
+	public boolean checkDatabaseExists(String databaseName) throws Exception {
+		String sql = "SELECT COUNT(*) as count from pg_database WHERE datname = ?";
+		List<Object> parameters = this.createParameterList(databaseName);
+		return this.runCountSql(sql, parameters,null, null, null, null) == 1;
+		/*
+		 * Session session = this.getOrdsDBSessionFactory().getCurrentSession();
+		 * try { Transaction transaction = session.beginTransaction(); SQLQuery
+		 * query = session.createSQLQuery(sql);
+		 * 
+		 * @SuppressWarnings("rawtypes") List results = query.list();
+		 * transaction.commit(); if(results.size() == 0 ) { return false; } else
+		 * { return true; } } catch (Exception e) { log.debug(e.getMessage());
+		 * session.getTransaction().rollback(); throw e; }
+		 */}
 
 	/**
 	 * Returns true if the table exists in the given database
@@ -248,14 +193,13 @@ public class StructureServiceImpl {
 	 * @param userName
 	 * @param password
 	 * @return
-	 * @throws Exception 
+	 * @throws Exception
 	 */
-	public boolean checkTableExists(String tableName, String databaseName,
+	public boolean checkTableExists(String tableName, String databaseName, String databaseServer,
 			String userName, String password) throws Exception {
-		String sql = String.format(
-				"SELECT COUNT(*) as count FROM pg_class WHERE relname=\'%s\'",
-				tableName);
-		return runCountSql(sql, databaseName, userName, password) == 1;
+		String sql = "SELECT COUNT(*) as count FROM pg_class WHERE relname=?";
+		List<Object> parameters = this.createParameterList(tableName);
+		return runCountSql(sql, parameters, databaseName, databaseServer, userName, password) == 1;
 	}
 
 	/**
@@ -267,97 +211,95 @@ public class StructureServiceImpl {
 	 * @param userName
 	 * @param password
 	 * @return
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	public boolean checkColumnExists(String columnName, String tableName,
-			String databaseName, String userName, String password) throws Exception {
-		String sql = String
-				.format("SELECT COUNT(*) as count FROM information_schema.columns "
-						+ "WHERE table_catalog=%s AND table_schema=%s AND table_name=%s AND column_name=%s",
-						databaseName, "public", tableName, columnName);
-		return runCountSql(sql, databaseName, userName, password) == 1;
-	}
-	
-	
-	public boolean checkConstraintExists(String tableName, String constraintName,
-			String databaseName, String userName, String password) throws Exception {
-        String query = "SELECT COUNT(*) as count FROM information_schema.table_constraints "
-                + "WHERE table_catalog=%s AND table_schema=%s AND table_name=%s AND constraint_name=%s;";
-        query = String.format(query, quote_literal(databaseName),
-        		"public",
-        		quote_literal(tableName),
-        		quote_literal(constraintName));
-        return runCountSql(query, databaseName, userName, password) == 1;
- 
-	}
-	
-	
-	
-	public boolean checkIndexExists (String tableName, String indexName,
-			String databaseName, String userName, String password ) throws Exception {
-        String query = "SELECT COUNT(*) FROM pg_index as idx JOIN pg_class as i ON i.oid = idx.indexrelid "           
-                +"WHERE CAST(idx.indrelid::regclass as text) = %s AND relname = %s";
-        query = String.format(query,
-        		quote_literal(tableName),
-        		quote_literal(indexName));
-        return runCountSql(query,databaseName, userName, password) == 1;
-
-
+			String databaseName, String databaseServer, String userName, String password)
+			throws Exception {
+		String sql = "SELECT COUNT(*) as count FROM information_schema.columns "
+				+ "WHERE table_catalog=? AND table_schema=? AND table_name=? AND column_name=?";
+		List<Object> parameters = this.createParameterList(databaseName,
+				"public", tableName, columnName);
+		return runCountSql(sql, parameters, databaseName, databaseServer, userName, password) == 1;
 	}
 
-	private int runCountSql(String sql, String dbName, String username,
+	public boolean checkConstraintExists(String tableName,
+			String constraintName, String databaseName, String databaseServer, String userName,
 			String password) throws Exception {
-		String server = this.getFirstServer();
-		if ( dbName == null ) {
-			dbName = "ordsdb"; // TODO: sort this mad hack
-		}
-		
-		CachedRowSet result = this.runJDBCQuery(sql, null, server, dbName);
-        try {
-            // If count is 1, then a table with the given name was found
-            while(result.next()) {
-                return result.getInt("count");
-            }
-        } finally {
-            result.close();
-        }
-        return 0;
+		String query = "SELECT COUNT(*) as count FROM information_schema.table_constraints "
+				+ "WHERE table_catalog=? AND table_schema=? AND table_name=? AND constraint_name=?;";
+		List<Object> parameters = this.createParameterList(databaseName,
+				"public", tableName, constraintName);
+		return runCountSql(query, parameters, databaseName, databaseServer, userName, password) == 1;
 
 	}
-	
-	
-	protected void runSQLStatement(String statement, String databaseName, String userName, String password ) {
-		Session session;
-		if ( databaseName == null ) {
-			session = this.getOrdsDBSessionFactory().openSession();
+
+	public boolean checkIndexExists(String tableName, String indexName,
+			String databaseName, String databaseServer, String userName, String password)
+			throws Exception {
+		String query = "SELECT COUNT(*) FROM pg_index as idx JOIN pg_class as i ON i.oid = idx.indexrelid "
+				+ "WHERE CAST(idx.indrelid::regclass as text) = ? AND relname = ?";
+		List<Object> parameters = this
+				.createParameterList(tableName, indexName);
+		return runCountSql(query, parameters, databaseName, databaseServer, userName, password) == 1;
+
+	}
+
+	private int runCountSql(String sql, List<Object> parameters, String dbName, String databaseServer,
+			String username, String password) throws Exception {
+		if (dbName == null) {
+			dbName = this.getORDSDatabaseName();
+			if (dbName == null) {
+				dbName = "ords2";
+			}
 		}
-		else {
-			session = this.getUserDBSessionFactory(databaseName, userName, password).openSession();
+
+		CachedRowSet result = this
+				.runJDBCQuery(sql, parameters, databaseServer, dbName);
+		try {
+			// If count is 1, then a table with the given name was found
+			while (result.next()) {
+				return result.getInt("count");
+			}
+		} finally {
+			result.close();
+		}
+		return 0;
+
+	}
+
+	protected void runSQLStatement(String statement, String databaseName,
+			String userName, String password) {
+		Session session;
+		if (databaseName == null) {
+			session = this.getOrdsDBSessionFactory().openSession();
+		} else {
+			session = this.getUserDBSessionFactory(databaseName, userName,
+					password).openSession();
 		}
 		try {
 			Transaction transaction = session.beginTransaction();
 			SQLQuery query = session.createSQLQuery(statement);
 			query.executeUpdate();
 			transaction.commit();
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
-		}	
-		finally {
+		} finally {
 			session.close();
 		}
 	}
-	
-	
-	protected Object singleResultQuery ( String query, String databaseName, String userName, String password){
+
+	protected Object singleResultQuery(String query, String databaseName,
+			String userName, String password) throws Exception {
+
 		Session session;
-		if ( databaseName == null ) {
+		if (databaseName == null) {
 			session = this.getOrdsDBSessionFactory().openSession();
-		}
-		else {
-			session = this.getUserDBSessionFactory(databaseName, userName, password).openSession();
+		} else {
+			session = this.getUserDBSessionFactory(databaseName, userName,
+					password).openSession();
 		}
 		try {
 			Transaction transaction = session.beginTransaction();
@@ -365,90 +307,95 @@ public class StructureServiceImpl {
 			Object result = sqlQuery.uniqueResult();
 			transaction.commit();
 			return result;
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
-		}
-		finally {
+		} finally {
 			session.close();
 		}
 	}
-	
-	
-	protected void runSQLStatements(List<String> statements, String databaseName, String userName, String password ){
+
+	protected void runSQLStatements(List<String> statements,
+			String databaseName, String userName, String password) {
 		Session session;
-		if ( databaseName == null ) {
+		if (databaseName == null) {
 			session = this.getOrdsDBSessionFactory().openSession();
-		}
-		else {
-			session = this.getUserDBSessionFactory(databaseName, userName, password).openSession();
+		} else {
+			session = this.getUserDBSessionFactory(databaseName, userName,
+					password).openSession();
 		}
 		try {
 			Transaction transaction = session.beginTransaction();
-			for ( String statement : statements ) { 
+			for (String statement : statements) {
 				SQLQuery query = session.createSQLQuery(statement);
 				query.executeUpdate();
 			}
 			transaction.commit();
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
-		}
-		finally {
+		} finally {
 			session.close();
 		}
 	}
-	
-	
-	protected void saveModelObject ( Object objectToSave ) throws Exception {
+
+	protected void saveModelObject(Object objectToSave) throws Exception {
 		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
 			session.save(objectToSave);
 			transaction.commit();
-		} 
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
-		}
-		finally {
+		} finally {
 			session.close();
 		}
 	}
 	
 	
-	
-	protected void removeModelObject ( Object objectToRemove ) throws Exception {
+	protected void updateModelObject(Object objectToUpdate ) throws Exception {
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			session.update(objectToUpdate);
+			transaction.commit();
+		} catch (Exception e) {
+			log.debug(e.getMessage());
+			session.getTransaction().rollback();
+			throw e;
+		} finally {
+			session.close();
+		}
+	}
+
+	protected void removeModelObject(Object objectToRemove) throws Exception {
 		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
 			session.delete(objectToRemove);
 			transaction.commit();
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
-		}
-		finally {
+		} finally {
 			session.close();
 		}
 	}
-	
-	
+
 	@SuppressWarnings("rawtypes")
-	protected List runSQLQuery ( String query, String databaseName, String username, String password) {
+	protected List runSQLQuery(String query, String databaseName,
+			String username, String password) {
 		Session session;
-		if (databaseName == null ) {
+		if (databaseName == null) {
 			session = this.getOrdsDBSessionFactory().openSession();
-		}
-		else {
-			session = this.getUserDBSessionFactory(databaseName, username, password).openSession();
+		} else {
+			session = this.getUserDBSessionFactory(databaseName, username,
+					password).openSession();
 		}
 		try {
 			Transaction transaction = session.beginTransaction();
@@ -456,14 +403,12 @@ public class StructureServiceImpl {
 			List results = sqlQuery.list();
 			transaction.commit();
 			return results;
-			
-		}
-		catch (Exception e) {
+
+		} catch (Exception e) {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
-		}
-		finally {
+		} finally {
 			session.close();
 		}
 	}
@@ -497,41 +442,42 @@ public class StructureServiceImpl {
 		}
 		return "'" + literal.replace("'", "''") + "'";
 	}
-	
-	
-    protected String columnComment(String databaseName, String tableName, String columnName) throws Exception {
-        log.debug("columnComment");
-        // col_description gives the comment stored for the given column.
-        // As with obj_description, we need the oid of the table which we acheieve
-        // by casting to regclass then to oid.  We also need the column number
-        // within the table, which we get from the name by using a subquery to 
-        // look it up in pg_attribute (Again requiring the table oid).
-        String query = "SELECT col_description(quote_ident(?)::regclass::oid, (SELECT attnum FROM pg_attribute WHERE attrelid = quote_ident(?)::regclass::oid AND attname = ?)) as comment";
-        
-        String server = this.getFirstServer();
-        
-        ArrayList<Object> parameters = new ArrayList<Object>();
-        
-        parameters.add(tableName);
-        parameters.add(tableName);
-        parameters.add(columnName);
-        String comment = "";
-        CachedRowSet result = this.runJDBCQuery(query, parameters, server, databaseName);
-        if ( result == null ) {
-        	return comment;
-        }
-        try {
-            while (result.next()) {
-                comment = result.getString("comment");
-            }
-        } finally {
-            result.close();
-        }
-        return comment;
-    }
 
-	
-	protected String tableComment(String databaseName, String tableName) throws Exception {
+	protected String columnComment(String databaseName, String databaseServer, String tableName,
+			String columnName) throws Exception {
+		log.debug("columnComment");
+		// col_description gives the comment stored for the given column.
+		// As with obj_description, we need the oid of the table which we
+		// acheieve
+		// by casting to regclass then to oid. We also need the column number
+		// within the table, which we get from the name by using a subquery to
+		// look it up in pg_attribute (Again requiring the table oid).
+		String query = "SELECT col_description(quote_ident(?)::regclass::oid, (SELECT attnum FROM pg_attribute WHERE attrelid = quote_ident(?)::regclass::oid AND attname = ?)) as comment";
+
+
+		ArrayList<Object> parameters = new ArrayList<Object>();
+
+		parameters.add(tableName);
+		parameters.add(tableName);
+		parameters.add(columnName);
+		String comment = "";
+		CachedRowSet result = this.runJDBCQuery(query, parameters, databaseServer,
+				databaseName);
+		if (result == null) {
+			return comment;
+		}
+		try {
+			while (result.next()) {
+				comment = result.getString("comment");
+			}
+		} finally {
+			result.close();
+		}
+		return comment;
+	}
+
+	protected String tableComment(String databaseName, String databaseServer, String tableName)
+			throws Exception {
 		log.debug("tableComment");
 		// obj_description gives the comment for an object, but needs the unique
 		// oid for that object. To find the oid for a table from its name, we
@@ -540,212 +486,210 @@ public class StructureServiceImpl {
 		String query = "SELECT obj_description(quote_ident(?)::regclass::oid, 'pg_class') as comment";
 		ArrayList<Object> parameters = new ArrayList<Object>();
 		parameters.add(tableName);
-		String server = this.getFirstServer();
 		String comment = "";
-		CachedRowSet result = this.runJDBCQuery(query, parameters, server, databaseName);
-		if ( result == null ) {
+		CachedRowSet result = this.runJDBCQuery(query, parameters, databaseServer,
+				databaseName);
+		if (result == null) {
 			return comment;
 		}
-        try {
-            while (result.next()) {
-                comment = result.getString("comment");
-            }
-        } 
-        finally {
-        	result.close();
-        }
-        return comment;
+		try {
+			while (result.next()) {
+				comment = result.getString("comment");
+			}
+		} finally {
+			result.close();
+		}
+		return comment;
 	}
-	
 
-	
-	
-    protected TableList addTableMetadata(String databaseName, String tableName, TableList response) throws Exception{
-        log.debug("addTableMetadata");
-    	// Get the foriegn keys, indexes, stored position and comment
-    	// For each table.
-    	List<HashMap<String, String>> foreignKeys = this.getForeignKeysFromPostgres(databaseName, tableName);
-    	List<HashMap<String, Object>> indexes = this.getIndexesFromPostgres(databaseName, tableName);
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	protected TableList addTableMetadata(String databaseName, String databaseServer, String tableName,
+			TableList response) throws Exception {
+		log.debug("addTableMetadata");
+		// Get the foriegn keys, indexes, stored position and comment
+		// For each table.
+		List<HashMap<String, String>> foreignKeys = this
+				.getForeignKeysFromPostgres(databaseName, databaseServer, tableName);
+		List<HashMap<String, Object>> indexes = this.getIndexesFromPostgres(
+				databaseName, databaseServer, tableName);
 
-    	log.debug(tableName);
-    	String userName = this.getODBCUserName();
-    	String password = this.getODBCPassword();
-    	// Get a complete description of the table columns
-    	List<HashMap<String, String>> columns = this.getTableDescription(databaseName, tableName, userName, password);
+		log.debug(tableName);
+		String userName = this.getODBCUserName();
+		String password = this.getODBCPassword();
+		// Get a complete description of the table columns
+		List<HashMap<String, String>> columns = this.getTableDescription(
+				databaseName, tableName, userName, password);
 
-    	if (log.isDebugEnabled()) {
-    		log.debug(String.format("We have %d rows", columns.size()));
-    	}
+		if (log.isDebugEnabled()) {
+			log.debug(String.format("We have %d rows", columns.size()));
+		}
 
-    	for (HashMap<String, String> column : columns) {
-    		String columnName = column.get("column_name");
-    		String defaultValue = column.get("column_default");
-    		int position = Integer.parseInt(column.get("ordinal_position"));
-    		boolean nullable = column.get("is_nullable").compareToIgnoreCase("YES") == 0;
-    		String columnComment = columnComment(databaseName, tableName, columnName);
+		for (HashMap<String, String> column : columns) {
+			String columnName = column.get("column_name");
+			String defaultValue = column.get("column_default");
+			int position = Integer.parseInt(column.get("ordinal_position"));
+			boolean nullable = column.get("is_nullable").compareToIgnoreCase(
+					"YES") == 0;
+			String columnComment = columnComment(databaseName, databaseServer, tableName,
+					columnName);
 
-    		Integer autoIncrement = 0;
-    		// Parse the default value to an interface-friendly
-    		// format, and identify if the field is auto-incremented
-    		if (defaultValue != null) {
-    			if (defaultValue.equals("''::text")) { // CSV
-    				defaultValue = "";
-    			} else if (defaultValue.matches("nextval\\('[A-Za-z0-9_\"]+'::regclass\\)")) {
-    				defaultValue = "";
-    				autoIncrement = 1;
-    			} else if (defaultValue.startsWith("NULL::")) {
-    				defaultValue = null;
-    			}
-    		}
+			Integer autoIncrement = 0;
+			// Parse the default value to an interface-friendly
+			// format, and identify if the field is auto-incremented
+			if (defaultValue != null) {
+				if (defaultValue.equals("''::text")) { // CSV
+					defaultValue = "";
+				} else if (defaultValue
+						.matches("nextval\\('[A-Za-z0-9_\"]+'::regclass\\)")) {
+					defaultValue = "";
+					autoIncrement = 1;
+				} else if (defaultValue.startsWith("NULL::")) {
+					defaultValue = null;
+				}
+			}
 
-    		if (log.isDebugEnabled()) {
-    			log.debug("Name: "+columnName);
-    			log.debug("datatype: "+ column.get("data_type"));
-    			log.debug("default value:" + defaultValue);
-    		}
+			if (log.isDebugEnabled()) {
+				log.debug("Name: " + columnName);
+				log.debug("datatype: " + column.get("data_type"));
+				log.debug("default value:" + defaultValue);
+			}
 
-    		// Format the field size appropriately for the data type
-    		String fieldSize = getFieldSize(column);
+			// Format the field size appropriately for the data type
+			String fieldSize = getFieldSize(column);
 
-    		// Translate the data type from PostgreSQL-speak to 
-    		// Schema Designer-speak
-    		String dataType = SqlDesignerTranslations
-    				.translateDatatype(column.get("data_type").toUpperCase(),
-    						fieldSize);
+			// Translate the data type from PostgreSQL-speak to
+			// Schema Designer-speak
+			String dataType = SqlDesignerTranslations.translateDatatype(column
+					.get("data_type").toUpperCase(), fieldSize);
 
-    		// Add the column to the response
-    		response.addColumn(tableName, 
-    				columnName, 
-    				position, 
-    				defaultValue, 
-    				nullable, 
-    				dataType, 
-    				autoIncrement == 1,
-    				columnComment);
+			// Add the column to the response
+			response.addColumn(tableName, columnName, position, defaultValue,
+					nullable, dataType, autoIncrement == 1, columnComment);
 
-    		if (log.isDebugEnabled()) {
-    			log.debug(column.toString());
-    		}
-    	}
+			if (log.isDebugEnabled()) {
+				log.debug(column.toString());
+			}
+		}
 
-    	// Use each foreign key to add table relationships to the
-    	// response
-    	for (HashMap<String, String> foreignKey : foreignKeys) {
-    		ArrayList parts = new ArrayList();
-    		parts.add(foreignKey.get("columnName"));
+		// Use each foreign key to add table relationships to the
+		// response
+		for (HashMap<String, String> foreignKey : foreignKeys) {
+			ArrayList parts = new ArrayList();
+			parts.add(foreignKey.get("columnName"));
 
-    		//
-    		// Get a subset of column information for the related table
-    		//
-    		HashMap<String, HashMap<String,String>> foreignTableColumnMap = new HashMap<String, HashMap<String,String>>();
-    		List<HashMap<String, String>> foreignTableColumns = this.getTableDescription(databaseName,(String)foreignKey.get("foreignTableName"), userName, password);
-    		if (foreignTableColumns != null){
-    			for (HashMap entry: foreignTableColumns){
-    				HashMap<String, String> column = new HashMap<String,String>();
-    				column.put("datatype", SqlDesignerTranslations.translateDatatype(((String)entry.get("data_type")).toUpperCase(), getFieldSize(entry))); 
-    				foreignTableColumnMap.put((String)entry.get("column_name"), column);
-    			}
-    		}
+			//
+			// Get a subset of column information for the related table
+			//
+			HashMap<String, HashMap<String, String>> foreignTableColumnMap = new HashMap<String, HashMap<String, String>>();
+			List<HashMap<String, String>> foreignTableColumns = this
+					.getTableDescription(databaseName,
+							(String) foreignKey.get("foreignTableName"),
+							userName, password);
+			if (foreignTableColumns != null) {
+				for (HashMap entry : foreignTableColumns) {
+					HashMap<String, String> column = new HashMap<String, String>();
+					column.put(
+							"datatype",
+							SqlDesignerTranslations.translateDatatype(
+									((String) entry.get("data_type"))
+											.toUpperCase(), getFieldSize(entry)));
+					foreignTableColumnMap.put(
+							(String) entry.get("column_name"), column);
+				}
+			}
 
-    		response.addRelation(tableName, 
-    				(String)foreignKey.get("constraintName"),
-    				(String)foreignKey.get("columnName"), 
-    				(String)foreignKey.get("foreignTableName"), 
-    				(String)foreignKey.get("foreignColumnName"),
-    				foreignTableColumnMap
-    				);
-    	}
+			response.addRelation(tableName,
+					(String) foreignKey.get("constraintName"),
+					(String) foreignKey.get("columnName"),
+					(String) foreignKey.get("foreignTableName"),
+					(String) foreignKey.get("foreignColumnName"),
+					foreignTableColumnMap);
+		}
 
-    	// Add each index to the response
-    	if (indexes.size() > 0) {
-    		for (HashMap<String, Object> index : indexes) {
-    			response.addIndex(tableName, 
-    					(String) index.get("name"), 
-    					(String) index.get("type"),
-    					(List) index.get("columns"));
-    		}
-    	}  
-    	return response;
-    }
+		// Add each index to the response
+		if (indexes.size() > 0) {
+			for (HashMap<String, Object> index : indexes) {
+				response.addIndex(tableName, (String) index.get("name"),
+						(String) index.get("type"), (List) index.get("columns"));
+			}
+		}
+		return response;
+	}
 
-    public List<HashMap<String, String>> getForeignKeysFromPostgres(String databaseName, String table) throws Exception {
-        log.debug("getForeignKeysFromPostgres");
-        
-        String query = "SELECT " +
-                "tc.constraint_name, tc.table_name, kcu.column_name, " +
-                "ccu.table_name AS foreign_table_name, " +
-                "ccu.column_name AS foreign_column_name " + 
-            "FROM information_schema.table_constraints tc " +
-                "JOIN information_schema.key_column_usage kcu " +
-                    "ON tc.constraint_name = kcu.constraint_name " +
-                "JOIN information_schema.constraint_column_usage ccu " +
-                    "ON ccu.constraint_name = tc.constraint_name " +
-            "WHERE "+
-                "constraint_type = 'FOREIGN KEY' " +
-                "AND tc.table_name = ?";
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	public List<HashMap<String, String>> getForeignKeysFromPostgres(
+			String databaseName,String databaseServer, String table) throws Exception {
+		log.debug("getForeignKeysFromPostgres");
 
-        List foreignKeys = new ArrayList();
-        HashMap<String, String> foreignKey;
-        @SuppressWarnings("unchecked")
-        String server = this.getFirstServer();
-        ArrayList<Object> parameters = new ArrayList<Object>();
-        parameters.add(table);
-        CachedRowSet rs = this.runJDBCQuery(query, parameters, server, databaseName);
-		//List<Object[]> results = this.runSQLQuery(query, null, null, null);
-        while ( rs.next() ) {
-            foreignKey = new HashMap();
-            foreignKey.put("constraintName", rs.getString("constraint_name"));
-            foreignKey.put("tableName", rs.getString("table_name"));
-            foreignKey.put("columnName", rs.getString("column_name"));
-            foreignKey.put("foreignTableName", rs.getString("foreign_table_name"));
-            foreignKey.put("foreignColumnName", rs.getString("foreign_column_name"));
+		String query = "SELECT "
+				+ "tc.constraint_name, tc.table_name, kcu.column_name, "
+				+ "ccu.table_name AS foreign_table_name, "
+				+ "ccu.column_name AS foreign_column_name "
+				+ "FROM information_schema.table_constraints tc "
+				+ "JOIN information_schema.key_column_usage kcu "
+				+ "ON tc.constraint_name = kcu.constraint_name "
+				+ "JOIN information_schema.constraint_column_usage ccu "
+				+ "ON ccu.constraint_name = tc.constraint_name " + "WHERE "
+				+ "constraint_type = 'FOREIGN KEY' " + "AND tc.table_name = ?";
 
-            foreignKeys.add(foreignKey);
-        }
+		List foreignKeys = new ArrayList();
+		HashMap<String, String> foreignKey;
+		ArrayList<Object> parameters = new ArrayList<Object>();
+		parameters.add(table);
+		CachedRowSet rs = this.runJDBCQuery(query, parameters, databaseServer,
+				databaseName);
+		// List<Object[]> results = this.runSQLQuery(query, null, null, null);
+		while (rs.next()) {
+			foreignKey = new HashMap();
+			foreignKey.put("constraintName", rs.getString("constraint_name"));
+			foreignKey.put("tableName", rs.getString("table_name"));
+			foreignKey.put("columnName", rs.getString("column_name"));
+			foreignKey.put("foreignTableName",
+					rs.getString("foreign_table_name"));
+			foreignKey.put("foreignColumnName",
+					rs.getString("foreign_column_name"));
 
-        return foreignKeys;
-    }
+			foreignKeys.add(foreignKey);
+		}
 
-	protected List<HashMap<String, Object>> getIndexesFromPostgres(String databaseName, String table) throws Exception {
-        String query = "SELECT " +
-            "i.relname as indexname, " +
-            "idx.indrelid::regclass as tablename, " +
-            "ARRAY( " +
-                "SELECT pg_get_indexdef(idx.indexrelid, k + 1, true) " +
-                "FROM generate_subscripts(idx.indkey, 1) as k " +
-                "ORDER BY k " +
-            ") as colnames, " +
-            "indisunique as isunique, " +
-            "indisprimary as isprimary " +
-        "FROM " +   
-            "pg_index as idx " +
-            "JOIN pg_class as i " +
-                "ON i.oid = idx.indexrelid " +
-        "WHERE CAST(idx.indrelid::regclass as text) = quote_ident(?)";
+		return foreignKeys;
+	}
+
+	protected List<HashMap<String, Object>> getIndexesFromPostgres(
+			String databaseName, String databaseServer, String table) throws Exception {
+		String query = "SELECT " + "i.relname as indexname, "
+				+ "idx.indrelid::regclass as tablename, " + "ARRAY( "
+				+ "SELECT pg_get_indexdef(idx.indexrelid, k + 1, true) "
+				+ "FROM generate_subscripts(idx.indkey, 1) as k "
+				+ "ORDER BY k " + ") as colnames, "
+				+ "indisunique as isunique, " + "indisprimary as isprimary "
+				+ "FROM " + "pg_index as idx " + "JOIN pg_class as i "
+				+ "ON i.oid = idx.indexrelid "
+				+ "WHERE CAST(idx.indrelid::regclass as text) = quote_ident(?)";
 		List<HashMap<String, Object>> indexes = new ArrayList<HashMap<String, Object>>();
 		HashMap<String, Object> index;
 		String type;
-		String server = this.getFirstServer();
 		ArrayList<Object> parameters = new ArrayList<Object>();
 		parameters.add(table);
-		CachedRowSet rs = this.runJDBCQuery(query, parameters, server, databaseName);
-		//List<Object[]> results = this.runSQLQuery(command, null, null, null);
+		CachedRowSet rs = this.runJDBCQuery(query, parameters, databaseServer,
+				databaseName);
+		// List<Object[]> results = this.runSQLQuery(command, null, null, null);
 		while (rs.next()) {
 			index = new HashMap<String, Object>();
 			index.put("name", rs.getString("indexname"));
 			ArrayList<String> columns = new ArrayList<String>();
-			ResultSet columnSet = rs.getArray("colnames").getResultSet();
-			while (columnSet.next()) {
-				columns.add(columnSet.getString("value"));
+			Array sqlArray = rs.getArray("colnames");
+			Object[] cols = (Object[]) sqlArray.getArray();
+			// ResultSet columnSet = sqlArray.getResultSet();
+			for (Object column : cols) {
+				columns.add(column.toString());
 			}
 			index.put("columns", columns);
 			if (rs.getBoolean("isprimary")) {
 				type = "PRIMARY";
-			}
-			else if (rs.getBoolean("isunique")) {
+			} else if (rs.getBoolean("isunique")) {
 				type = "UNIQUE";
-			}
-			else {
+			} else {
 				type = "INDEX";
 			}
 			index.put("type", type);
@@ -755,10 +699,10 @@ public class StructureServiceImpl {
 
 		return indexes;
 	}
-	
-	
-	public List<HashMap<String, String>> getTableDescription(String databaseName, String tableName, String userName, String password )
-			throws Exception {
+
+	public List<HashMap<String, String>> getTableDescription(
+			String databaseName, String tableName, String userName,
+			String password) throws Exception {
 		log.debug("getTableDescription");
 
 		ArrayList<String> fields = new ArrayList<String>();
@@ -779,29 +723,26 @@ public class StructureServiceImpl {
 		HashMap<String, String> columnDescription;
 		List<HashMap<String, String>> columnDescriptions = new ArrayList<HashMap<String, String>>();
 		@SuppressWarnings("unchecked")
-		List<Object> rows = this.runSQLQuery(command, databaseName, userName, password);
+		List<Object[]> rows = this.runSQLQuery(command, databaseName, userName,
+				password);
 
 		// First get all column names
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("Found columns for table %s", tableName));
 		}
-		if (rows.size() != 1) {
-			throw new Exception("Internal or programmer error");
-		}
-		Object[] row = (Object[]) rows.get(0);
-		columnDescription = new HashMap<String, String>();
-		int i = 0;
-		for (String field : fields) {
-			Object c = row[i++];
-			if ( c != null ) {
-				columnDescription.put(field, c.toString());
+		for (Object[] row : rows) {
+			columnDescription = new HashMap<String, String>();
+			int i = 0;
+			for (String field : fields) {
+				Object c = row[i++];
+				if (c != null) {
+					columnDescription.put(field, c.toString());
+				} else {
+					columnDescription.put(field, null);
+				}
 			}
-			else {
-				columnDescription.put(field, null);
-			}
+			columnDescriptions.add(columnDescription);
 		}
-
-		columnDescriptions.add(columnDescription);
 
 		if (log.isDebugEnabled()) {
 			log.debug("getTableDescription:return " + columnDescriptions.size()
@@ -810,154 +751,177 @@ public class StructureServiceImpl {
 
 		return columnDescriptions;
 	}
-	
-	
-    protected String getFieldSize(HashMap<String, String> column) {
-        log.debug("getFieldSize");
+
+	protected String getFieldSize(HashMap<String, String> column) {
+		log.debug("getFieldSize");
 		// Format the field size appropriately for the data type
 		String fieldSize;
 		if (column.get("data_type").compareToIgnoreCase("numeric") == 0) {
-			fieldSize = String.format("%s,%s",
-					column.get("numeric_precision"),
+			fieldSize = String.format("%s,%s", column.get("numeric_precision"),
 					column.get("numeric_scale"));
 		} else {
 			fieldSize = column.get("character_maximum_length");
 		}
 		return fieldSize;
-    }
-    
-    
-    protected User getUserByPrincipal ( String principalName ) {
+	}
+
+	protected User getUserByPrincipal(String principalName) {
 		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
-			
+
 			@SuppressWarnings("unchecked")
-			List<User> users = (List<User>) session.createCriteria(User.class).add(Restrictions.eq("principalName", principalName)).list();
+			List<User> users = (List<User>) session.createCriteria(User.class)
+					.add(Restrictions.eq("principalName", principalName))
+					.list();
 			transaction.commit();
-			if (users.size() == 1){
+			if (users.size() == 1) {
 				return users.get(0);
-			} 
+			}
 			return null;
 		} catch (Exception e) {
 			session.getTransaction().rollback();
 			throw e;
-		}
-		finally {
+		} finally {
 			session.close();
 		}
-    }
-    
-    
-    protected String getTerminateStatement ( String databaseName ) throws Exception {
-        boolean above9_2 = isPostgresVersionAbove9_2();
-        String command;
-        if (above9_2) {
-            log.info("Postgres version is 9.2 or later");
-            command = String.format("select pg_terminate_backend(pid) from pg_stat_activity where datname = '%s' AND pid <> pg_backend_pid()", databaseName);
-        }
-        else {
-            log.info("Postgres version is earlier than 9.2");
-            command = String.format("select pg_terminate_backend(procpid) from pg_stat_activity where datname = '%s' AND procpid <> pg_backend_pid()", databaseName);
-        }
-        return command;
+	}
 
-    }
-    
-    private String[] getPostgresVersionArray() throws Exception {
-        
-    	String version = (String) this.singleResultQuery("SELECT version()", null, null, null);
-        
-        String[] versionArray = null;
-        String[] tempVersionArray = null;
-        tempVersionArray = version.split(" ");
-        version = tempVersionArray[1];
-        versionArray = version.split("\\.");
+	protected String getTerminateStatement(String databaseName)
+			throws Exception {
+		boolean above9_2 = isPostgresVersionAbove9_2();
+		String command;
+		if (above9_2) {
+			log.info("Postgres version is 9.2 or later");
+			command = String
+					.format("select pg_terminate_backend(pid) from pg_stat_activity where datname = '%s' AND pid <> pg_backend_pid()",
+							databaseName);
+		} else {
+			log.info("Postgres version is earlier than 9.2");
+			command = String
+					.format("select pg_terminate_backend(procpid) from pg_stat_activity where datname = '%s' AND procpid <> pg_backend_pid()",
+							databaseName);
+		}
+		return command;
 
-        
-        return versionArray;
-    }
-    
-    public boolean isPostgresVersionAbove9_2() throws Exception {
-        String[] versionArray = getPostgresVersionArray();
-        boolean above = false;
-        if (versionArray != null) {
-            try {
-                int majorVersionNumber = Integer.parseInt(versionArray[0]);
-                int minorVersionNumber = Integer.parseInt(versionArray[1]);
-                if (majorVersionNumber >= 9) {
-                    if (minorVersionNumber >= 2) {
-                        above = true;
-                    }
-                }
-            }
-            catch (NumberFormatException e) {
-                log.error("Unable to get Postgres version");
-            }
-        }
-        
-        
-        return above;
-    }
-    
-    
-    protected CachedRowSet runJDBCQuery ( String query, List<Object> parameters, String server, String databaseName ) throws Exception {
-    	
-    	String connectionURL = "jdbc:postgresql://"+server+"/"+databaseName;
-    	String userName = this.getODBCUserName();
-    	String password = this.getODBCPassword();
-    	Connection connection = null;
-    	Properties connectionProperties = new Properties();
-    	connectionProperties.put("user", userName);
-    	connectionProperties.put("password", password);
-    	PreparedStatement preparedStatement = null;
-    	try {
-    		connection = DriverManager.getConnection(connectionURL, connectionProperties);
-    		preparedStatement = connection.prepareStatement(query);
-    		if ( parameters != null ) {
-                int paramCount = 1;
-                for (Object parameter : parameters) {
-                    @SuppressWarnings("rawtypes")
+	}
+
+	private String[] getPostgresVersionArray() throws Exception {
+
+		String version = (String) this.singleResultQuery("SELECT version()",
+				null, null, null);
+
+		String[] versionArray = null;
+		String[] tempVersionArray = null;
+		tempVersionArray = version.split(" ");
+		version = tempVersionArray[1];
+		versionArray = version.split("\\.");
+
+		return versionArray;
+	}
+
+	public boolean isPostgresVersionAbove9_2() throws Exception {
+		String[] versionArray = getPostgresVersionArray();
+		boolean above = false;
+		if (versionArray != null) {
+			try {
+				int majorVersionNumber = Integer.parseInt(versionArray[0]);
+				int minorVersionNumber = Integer.parseInt(versionArray[1]);
+				if (majorVersionNumber >= 9) {
+					if (minorVersionNumber >= 2) {
+						above = true;
+					}
+				}
+			} catch (NumberFormatException e) {
+				log.error("Unable to get Postgres version");
+			}
+		}
+
+		return above;
+	}
+
+	/**
+	 * createParametersList: convenience function for creating a list
+	 * 
+	 * @param args
+	 * @return
+	 */
+	protected List<Object> createParameterList(Object... args) {
+		ArrayList<Object> parameters = new ArrayList<Object>();
+		for (Object p : args) {
+			parameters.add(p);
+		}
+		return parameters;
+	}
+
+	protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,
+			String server, String databaseName) throws Exception {
+		Connection connection = null;
+		Properties connectionProperties = new Properties();
+		PreparedStatement preparedStatement = null;
+		if ( server != null ){
+			
+			String userName = this.getODBCUserName();
+			String password = this.getODBCPassword();
+			connectionProperties.put("user", userName);
+			connectionProperties.put("password", password);
+		}
+		else {
+			// get the ords database configuration
+			Configuration config = MetaConfiguration.getConfiguration();
+			connectionProperties.put("user", config.getString(StructureServiceImpl.ORDS_DATABASE_USER));
+			connectionProperties.put("password", config.getString(StructureServiceImpl.ORDS_DATABASE_PASSWORD));
+			server = config.getString(StructureServiceImpl.ORDS_DATABASE_HOST);
+		}
+		String connectionURL = "jdbc:postgresql://" + server + "/"
+				+ databaseName;
+		try {
+			connection = DriverManager.getConnection(connectionURL,
+					connectionProperties);
+			preparedStatement = connection.prepareStatement(query);
+			if (parameters != null) {
+				int paramCount = 1;
+				for (Object parameter : parameters) {
+					@SuppressWarnings("rawtypes")
 					Class type = parameter.getClass();
-                    if (type.equals(String.class)) {
-                        preparedStatement.setString(paramCount, (String) parameter);
-                    }
-                    if (type.equals(Integer.class)) {
-                    	preparedStatement.setInt(paramCount, (Integer) parameter);
-                    }
-                    paramCount++;
-                }
-   			
-    		}
-            if (query.toLowerCase().startsWith("select")) {
-                ResultSet result = preparedStatement.executeQuery();
-                CachedRowSet rowSet = new CachedRowSetImpl();
-                rowSet.populate(result);
-                log.debug("prepareAndExecuteStatement:return result");
-                return rowSet;
-            } else {
-                preparedStatement.execute();
-                log.debug("prepareAndExecuteStatement:return null");
-                return null;
-            }
-        
-        } 
-        catch (SQLException e) {
-        	log.error("Error with this command", e);
-        	log.error("Query:" + query);
-        	return null;
-        }
-        finally {
-            if (preparedStatement != null) {
-                preparedStatement.close();
-            }
-            if (connection != null) {
-                connection.close();
-            }
-        }
+					if (type.equals(String.class)) {
+						preparedStatement.setString(paramCount,
+								(String) parameter);
+					}
+					if (type.equals(Integer.class)) {
+						preparedStatement.setInt(paramCount,
+								(Integer) parameter);
+					}
+					paramCount++;
+				}
 
-    	
-    	
-    }
-  
+			}
+			if (query.toLowerCase().startsWith("select")) {
+				ResultSet result = preparedStatement.executeQuery();
+				CachedRowSet rowSet = RowSetProvider.newFactory()
+						.createCachedRowSet();
+				rowSet.populate(result);
+				log.debug("prepareAndExecuteStatement:return result");
+				return rowSet;
+			} else {
+				preparedStatement.execute();
+				log.debug("prepareAndExecuteStatement:return null");
+				return null;
+			}
+
+		} catch (SQLException e) {
+			log.error("Error with this command", e);
+			log.error("Query:" + query);
+			return null;
+		} finally {
+			if (preparedStatement != null) {
+				preparedStatement.close();
+			}
+			if (connection != null) {
+				connection.close();
+			}
+		}
+
+	}
+
 }

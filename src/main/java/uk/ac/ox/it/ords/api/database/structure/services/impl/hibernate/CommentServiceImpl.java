@@ -18,6 +18,7 @@ package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
 import javax.ws.rs.NotFoundException;
 
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.services.CommentService;
 
 public class CommentServiceImpl extends StructureServiceImpl
@@ -29,11 +30,16 @@ public class CommentServiceImpl extends StructureServiceImpl
 			boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
-		if (!this.checkTableExists(tableName, databaseName, userName, password)) {
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
+		if (!this.checkTableExists(tableName, databaseName, server,userName, password)) {
 			throw new NotFoundException();
 		}
-		return this.tableComment(databaseName, tableName);
+		return this.tableComment(databaseName, server, tableName);
 	}
 
 	@Override
@@ -41,8 +47,13 @@ public class CommentServiceImpl extends StructureServiceImpl
 			String comment, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
-		if (!this.checkTableExists(tableName, databaseName, userName, password)) {
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
+		if (!this.checkTableExists(tableName, databaseName, server, userName, password)) {
 			throw new NotFoundException();
 		}
 		String statement = String.format("COMMENT ON TABLE %s IS %s",
@@ -56,11 +67,16 @@ public class CommentServiceImpl extends StructureServiceImpl
 			String columnName, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
-		if ( !this.checkColumnExists(columnName, tableName, databaseName, userName, password)){
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
+		if ( !this.checkColumnExists(columnName, tableName, databaseName, server, userName, password)){
 			throw new NotFoundException();
 		}
-		return this.columnComment(databaseName, tableName, columnName);
+		return this.columnComment(databaseName, server, tableName, columnName);
 	}
 
 	@Override
@@ -68,8 +84,13 @@ public class CommentServiceImpl extends StructureServiceImpl
 			String columnName, String comment, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
-		if ( !this.checkColumnExists(columnName, tableName, databaseName, userName, password)){
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
+		if ( !this.checkColumnExists(columnName, tableName, databaseName, server, userName, password)){
 			throw new NotFoundException();
 		}
 		String identifier = String.format("%s.%s", 

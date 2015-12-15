@@ -14,22 +14,23 @@
  * limitations under the License.
  */
 
-package uk.ac.ox.it.ords.api.database.structure.metadata;
+
+package uk.ac.ox.it.ords.api.database.structure.dto;
 
 
-public class TableRenameRequest {
+public class CommentRequest {
     /**
-     * The new name of the table
+     * The text of the comment to be set
      */
-    private String newname;
+    private String comment;
 
-    public String getNewname() {
-        return newname;
+    public String getComment() {
+        return comment;
     }
 
-    public void setNewname(String newname) {
-        this.newname = newname;
+    public void setComment(String comment) {
+        this.comment = comment;
     }
-
-    public TableRenameRequest() {};
+    
+    public CommentRequest() {}
 }

@@ -31,8 +31,9 @@ import org.hibernate.type.StringType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.ox.it.ords.api.database.structure.dto.ColumnRequest;
 import uk.ac.ox.it.ords.api.database.structure.exceptions.BadParameterException;
-import uk.ac.ox.it.ords.api.database.structure.metadata.ColumnRequest;
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.services.ColumnStructureService;
 
 public class ColumnStructureServiceImpl extends StructureServiceImpl
@@ -187,17 +188,24 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 
 			String query;
 			// do all the stuff
+			if (autoinc) {
+				query = String.format("CREATE SEQUENCE %s", sequenceName);
+				session.createSQLQuery(query).executeUpdate();
+				query = String.format("ALTER SEQUENCE %s OWNER TO %s", 
+                        sequenceName,
+                        userName);
+				session.createSQLQuery(query).executeUpdate();
+			}
 			String constraints = nullConstraint + defaultConstraint;
 			query = String.format("ALTER TABLE %s ADD COLUMN %s %s %s;",
 					quote_ident(tableName), quote_ident(columnName), datatype,
 					constraints);
 			session.createSQLQuery(query).executeUpdate();
 			if (autoinc) {
-				query = String.format("CREATE SEQUENCE %s", sequenceName);
-				session.createSQLQuery(query).executeUpdate();
 				query = String.format("ALTER SEQUENCE %s OWNED BY %s.%s",
-						sequenceName, tableName, columnName);
+						sequenceName, quote_ident(tableName), quote_ident(columnName));
 				session.createSQLQuery(query).executeUpdate();
+
 			}
 			tx.commit();
 		} catch (Exception e) {
@@ -214,12 +222,16 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 	public void updateColumn(int dbId, String instance, String tableName,
 			String columnName, ColumnRequest request, boolean staging)
 			throws Exception {
-		String databaseName = this
-				.dbNameFromIDInstance(dbId, instance, staging);
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
 
-		if (!this.checkColumnExists(columnName, tableName, databaseName,
+		if (!this.checkColumnExists(columnName, tableName, databaseName, server,
 				userName, password)) {
 			throw new NotFoundException(String.format(
 					"Column name %s does not exist", columnName));
@@ -311,7 +323,7 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 		// with that name doesn't already exist in the table
 		if (newName != null
 				&& !newName.isEmpty()
-				&& checkColumnExists(newName, tableName, databaseName,
+				&& checkColumnExists(newName, tableName, databaseName,server,
 						userName, password)) {
 
 			log.error(
@@ -444,12 +456,16 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 
 	public void deleteColumn(int dbId, String instance, String tableName,
 			String columnName, boolean staging) throws Exception {
-		String databaseName = this
-				.dbNameFromIDInstance(dbId, instance, staging);
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
 
-		if (!this.checkColumnExists(columnName, tableName, databaseName,
+		if (!this.checkColumnExists(columnName, tableName, databaseName, server,
 				userName, password)) {
 			throw new NotFoundException(String.format(
 					"Attempt to delete column %s which doesn't exist!",
