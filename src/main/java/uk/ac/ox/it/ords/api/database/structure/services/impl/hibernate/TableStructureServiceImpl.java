@@ -68,8 +68,7 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	@Override
 	public void createNewTable(int dbId, String instance, String tableName, boolean staging)
 			throws Exception {
-        final String query = String.format("CREATE TABLE %s();", quote_ident(tableName));
-		String userName = this.getODBCUserName();
+ 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
@@ -80,7 +79,9 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 		if ( this.checkTableExists(tableName, databaseName, server, userName, password)) {
 			throw new NamingConflictException(String.format("The table %s already exists in database %s", tableName, databaseName));
 		}
-		this.runSQLStatement(query, databaseName, userName, password);
+		// aargh prepared statements don't work with create table so we have to format the string ourselves!
+		String statement = "CREATE TABLE \""+tableName+"\"();";
+		this.runJDBCQuery(statement, null, server, databaseName);
 
 	}
 
@@ -101,10 +102,10 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 		if ( this.checkTableExists(tableNewName, databaseName,server, userName, password)){
 			throw new NamingConflictException("There is already a table called "+tableNewName+" in database "+databaseName);
 		}
-		String query = String.format("ALTER TABLE %s RENAME TO %s;", 
-                quote_ident(tableName), 
-                quote_ident(tableNewName));
-		this.runSQLStatement(query, databaseName, userName, password);
+		String query = "ALTER TABLE ? RENAME TO ?;";
+		List<Object> parameters = createParameterList(tableName, tableNewName );
+		this.runJDBCQuery(query, parameters, server, databaseName);
+
         query = String.format("SELECT sequence_name FROM information_schema.sequences where sequence_name LIKE %s",
         		quote_ident(tableName+"%"));
         Session session = this.getOrdsDBSessionFactory().openSession();
@@ -150,9 +151,7 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 		if ( !this.checkTableExists(tableName, databaseName, server, userName, password)) {
 			throw new NotFoundException(String.format("No table called %s found in database %s", tableName, databaseName));
 		}
-        final String query = String.format("DROP TABLE %s;", quote_ident(tableName));
-        this.runSQLStatement(query, databaseName, userName, password);
-        
+		this.runJDBCQuery("DROP TABLE ?", createParameterList(tableName), server, databaseName);
 	}
 
 	@Override

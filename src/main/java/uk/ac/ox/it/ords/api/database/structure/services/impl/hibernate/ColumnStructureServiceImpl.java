@@ -471,9 +471,9 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 					"Attempt to delete column %s which doesn't exist!",
 					columnName));
 		}
-		String query = String.format("ALTER TABLE %s DROP %s;",
-				quote_ident(tableName), quote_ident(columnName));
-		this.runSQLStatement(query, databaseName, userName, password);
+		String query = "ALTER TABLE ? DROP ?;";
+		List<Object> parameters = this.createParameterList(tableName, columnName);
+		this.runJDBCQuery(query, parameters, server, databaseName);
 	}
 
 	private String generateSequenceName(String tableName, String columnName) {

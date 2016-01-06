@@ -18,6 +18,7 @@ package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
 import java.util.List;
 
+import javax.sql.rowset.CachedRowSet;
 import javax.ws.rs.NotFoundException;
 
 import org.apache.shiro.SecurityUtils;
@@ -123,7 +124,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		String username = this.getODBCUserName();
 		String password = this.getODBCPassword();
 		this.createOBDCUserRole(username, password);
-		OrdsPhysicalDatabase db = this.createEmptyDatabase(id, databaseDTO,
+		OrdsPhysicalDatabase db = this.createEmptyDatabase(id, databaseDTO, instance,
 				username, password);
 		DatabaseStructureRoleService.Factory.getInstance()
 				.createInitialPermissions(db.getPhysicalDatabaseId());
@@ -176,9 +177,9 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 
 		String query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name";
 		// getting a single scalar value so hibernate returns a list of strings
-		@SuppressWarnings("rawtypes")
-		List results = this
-				.runSQLQuery(query, databaseName, userName, password);
+		CachedRowSet results = this.runJDBCQuery(query, null, server, databaseName);
+		//List results = this
+		//		.runSQLQuery(query, databaseName, userName, password);
 		TableList tables = new TableList();
 
 		int counter = 0;
@@ -192,8 +193,8 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 			multiplier = 120;
 		}
 
-		for (Object tableNameObject : results) {
-			String tableName = tableNameObject.toString();
+		while( results.next() ) {
+			String tableName = results.getString("table_name");
 			// get the schema designer table for this table
 			SchemaDesignerTable sdt = this.getSchemaDesignerTable(
 					database.getPhysicalDatabaseId(), tableName.toString());
@@ -224,14 +225,22 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 			this.deleteDatabase(dbId, instance, true);
 		}
 		String clonedb = String.format(
-				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s",
+				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s OWNER = %s",
 				quote_ident(stagingName),
-				quote_ident(database.getDbConsumedName()));
-		this.runSQLStatement(clonedb, null, null, null);
-//		String sequenceName = "ords_constraint_seq";
-//		String createSequence = String.format("CREATE SEQUENCE %s",
-//		quote_ident(sequenceName));
-//		this.runSQLStatement(createSequence, stagingName, userName, password);
+				quote_ident(database.getDbConsumedName()),
+				quote_ident(userName));
+		this.runSQLStatementOnOrdsDB(clonedb);
+		//String sequenceName = "ords_constraint_seq";
+		//String createSequence = String.format("CREATE SEQUENCE %s",
+		//quote_ident(sequenceName));
+		//this.runSQLStatement(createSequence, stagingName, userName, password);
+		String sequenceName = "ords_constraint_seq";
+		String createSequence = "CREATE SEQUENCE ?";
+		List<Object> parameters = this.createParameterList(sequenceName);
+		String server = database.getDatabaseServer();
+		this.runJDBCQuery(createSequence, parameters, server, stagingName);
+		
+		
 		return stagingName;
 	}
 
@@ -255,10 +264,10 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		}
 		String sql = "rollback transaction; drop database " + databaseName
 				+ ";";
-		this.runSQLStatement(sql, null, null, null);
+		this.runSQLStatementOnOrdsDB(sql);
 		sql = String.format("ALTER DATABASE %s RENAME TO %s", stagingName,
 				databaseName);
-		this.runSQLStatement(sql, null, null, null);
+		this.runSQLStatementOnOrdsDB(sql);
 
 	}
 
@@ -279,7 +288,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		String statement = this.getTerminateStatement(databaseName);
 		this.runSQLQuery(statement, null, null, null);
 		statement = "rollback transaction; drop database " + databaseName + ";";
-		this.runSQLStatement(statement, null, null, null);
+		this.runSQLStatementOnOrdsDB(statement);
 	}
 
 	private void createOBDCUserRole(String username, String password)
@@ -295,11 +304,11 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 			String command = String
 					.format("create role \"%s\" nosuperuser login createdb inherit nocreaterole password '%s' valid until '2045-01-01'",
 							username, password);
-			this.runSQLStatement(command, null, null, null);
+			this.runSQLStatementOnOrdsDB(command);
 		}
 	}
 
-	private OrdsPhysicalDatabase createEmptyDatabase(int id, DatabaseRequest databaseDTO,
+	private OrdsPhysicalDatabase createEmptyDatabase(int id, DatabaseRequest databaseDTO, String instance,
 			String userName, String password) throws Exception {
 		log.debug("createEmptyDatabase");
 		OrdsPhysicalDatabase db = new OrdsPhysicalDatabase();
@@ -313,7 +322,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		db.setFileName("none");
 		db.setFullPathToDirectory(System.getProperty("java.io.tmpdir")
 				+ "/databases");
-		db.setDatabaseType("RAW");
+		db.setDatabaseType(instance);
 
 		this.saveModelObject(db);
 
@@ -326,7 +335,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 					"rollback transaction;create database %s owner = \"%s\";",
 					dbName, userName);
 
-			this.runSQLStatement(statement, null, null, null);
+			this.runSQLStatementOnOrdsDB(statement);
 			String sequenceName = "ords_constraint_seq";
 			String createSequence = "CREATE SEQUENCE ?";
 			List<Object> parameters = this.createParameterList(sequenceName);

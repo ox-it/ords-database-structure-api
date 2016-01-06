@@ -17,6 +17,7 @@
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.sql.rowset.CachedRowSet;
 import javax.ws.rs.NotFoundException;
@@ -217,29 +218,30 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 	public void updateConstraint(int dbId, String instance, String tableName,
 			String constraintName, ConstraintRequest constraint, boolean staging)
 			throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
 		String newName = constraint.getNewname();
-		String query = String.format("ALTER TABLE %s RENAME CONSTRAINT %s to %s",
-                quote_ident(tableName),
-                quote_ident(constraintName),
-                quote_ident(newName));
-		this.runSQLStatement(query, databaseName, userName, password);
+		String query = "ALTER TABLE ? RENAME CONSTRAINT ? to ?";
+		List<Object> parameters = createParameterList(tableName, constraintName, newName);
+		this.runJDBCQuery(query, parameters, server, databaseName);
 	}
 
 	
 	@Override
 	public void deleteConstraint(int dbId, String instance, String tableName,
 			String constraintName, boolean staging) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
-		String query = String.format("ALTER TABLE %s DROP CONSTRAINT %s",
-                quote_ident(tableName),
-                quote_ident(constraintName));
-		this.runSQLStatement(query, databaseName, userName, password);
-
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
+		String query = "ALTER TABLE ? DROP CONSTRAINT ?";
+		this.runJDBCQuery(query, createParameterList(tableName, constraintName), server, databaseName);
 	}
 	
 	

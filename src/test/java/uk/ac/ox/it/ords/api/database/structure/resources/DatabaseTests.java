@@ -83,7 +83,7 @@ public class DatabaseTests extends AbstractResourceTest {
 		
 		// create a staging version
 		response = getClient().path("/"+dbID+"/MAIN/staging").post(null);
-		assertEquals(200, response.getStatus());
+		assertEquals(201, response.getStatus());
 		
 		// merge it down to actual
 		response = getClient().path("/"+dbID+"/MAIN/staging").put(null);

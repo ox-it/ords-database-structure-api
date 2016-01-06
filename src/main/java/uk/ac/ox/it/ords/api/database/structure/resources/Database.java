@@ -17,6 +17,7 @@
 package uk.ac.ox.it.ords.api.database.structure.resources;
 
 import java.util.List;
+import java.util.Locale;
 
 import javax.annotation.PostConstruct;
 import javax.ws.rs.Consumes;
@@ -33,7 +34,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.shiro.SecurityUtils;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.ColumnRequest;
@@ -41,6 +41,7 @@ import uk.ac.ox.it.ords.api.database.structure.dto.CommentRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.ConstraintRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.IndexRequest;
+import uk.ac.ox.it.ords.api.database.structure.dto.Language;
 import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.TableRenameRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
@@ -132,7 +133,6 @@ public class Database extends AbstractResource{
 	
 	@DELETE
 	@Path("{id}/{instance}")
-	@Produces(MediaType.APPLICATION_JSON)
 	public Response dropDatabase (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance ) {		
@@ -175,17 +175,19 @@ public class Database extends AbstractResource{
 	
 	@POST
 	@Path("{id}/{instance}/staging")
-	@Produces(MediaType.APPLICATION_JSON)
 	public Response createStagingDatabase (
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance ) {
+			@PathParam("instance") String instance,
+			@Context UriInfo uriInfo) {
 		
 		if (!canModifyDatabase(dbId)) {
 			return forbidden();		
 		}
 		try {
-			String dbName = databaseServiceInstance().createNewStagingDatabase(dbId, instance);
-			return Response.ok(dbName).build();
+			String databaseName = databaseServiceInstance().createNewStagingDatabase(dbId, instance);
+		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+		    builder.path(databaseName);
+		    return Response.created(builder.build()).build();
 		}
 		catch ( Exception e ) {
 			return this.handleException(e);
@@ -216,7 +218,6 @@ public class Database extends AbstractResource{
 	
 	@DELETE
 	@Path("{id}/{instance}/staging")
-	@Produces(MediaType.APPLICATION_JSON)
 	public Response dropStaginDatabase (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance ) {
@@ -243,7 +244,6 @@ public class Database extends AbstractResource{
 	@PUT
 	@Path("{id}/{instance}/positions")
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
 	public Response saveTablePositions (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -260,6 +260,8 @@ public class Database extends AbstractResource{
 			return this.handleException(e);
 		}
 	}
+	
+	
 	
 
 	/********************************************************

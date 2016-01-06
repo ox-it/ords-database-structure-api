@@ -267,29 +267,48 @@ public class StructureServiceImpl {
 		return 0;
 
 	}
-
-	protected void runSQLStatement(String statement, String databaseName,
-			String userName, String password) {
-		Session session;
-		if (databaseName == null) {
-			session = this.getOrdsDBSessionFactory().openSession();
-		} else {
-			session = this.getUserDBSessionFactory(databaseName, userName,
-					password).openSession();
-		}
+	
+	
+	protected void runSQLStatementOnOrdsDB(String statement) {
+		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
 			SQLQuery query = session.createSQLQuery(statement);
 			query.executeUpdate();
 			transaction.commit();
-		} catch (Exception e) {
+		}
+		catch (Exception e) {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
 			throw e;
-		} finally {
+		}
+		finally {
 			session.close();
 		}
 	}
+
+//	protected void runSQLStatement(String statement, String databaseName,
+//			String userName, String password) {
+//		Session session;
+//		if (databaseName == null) {
+//			session = this.getOrdsDBSessionFactory().openSession();
+//		} else {
+//			session = this.getUserDBSessionFactory(databaseName, userName,
+//					password).openSession();
+//		}
+//		try {
+//			Transaction transaction = session.beginTransaction();
+//			SQLQuery query = session.createSQLQuery(statement);
+//			query.executeUpdate();
+//			transaction.commit();
+//		} catch (Exception e) {
+//			log.debug(e.getMessage());
+//			session.getTransaction().rollback();
+//			throw e;
+//		} finally {
+//			session.close();
+//		}
+//	}
 
 	protected Object singleResultQuery(String query, String databaseName,
 			String userName, String password) throws Exception {

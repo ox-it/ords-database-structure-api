@@ -17,6 +17,7 @@
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
@@ -53,9 +54,12 @@ public class IndexServiceImpl extends StructureServiceImpl
 	@Override
 	public void createIndex(int dbId, String instance, String tableName,
 			String indexName, IndexRequest newIndex, boolean staging) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
         Boolean isUnique = newIndex.isUnique();
         ArrayList columnsList = new ArrayList(); 
         // Check that the index has at least one column
@@ -76,31 +80,27 @@ public class IndexServiceImpl extends StructureServiceImpl
             unique = "UNIQUE ";
         }
 
-        String query = String.format("CREATE %sINDEX %s ON %s (%s)",
-                            unique,
-                            quote_ident(indexName),
-                            quote_ident(tableName),
-                            columns);
-
-
-        this.runSQLStatement(query, databaseName, userName, password);  
-
+        String query = "CREATE ? INDEX ? ON ? (?)";
+        List<Object> parameters = this.createParameterList(unique, indexName, tableName, columns);
+        this.runJDBCQuery(query, parameters, server, databaseName);
 	}
+	
 
 	@Override
 	public void updateIndex(int dbId, String instance, String tableName,
 			String indexName, IndexRequest index, boolean staging)
 			throws Exception {
         String newName = index.getNewname();
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
        
-        // Generate the SQL to rename the index
-        final String query = String.format("ALTER INDEX %s RENAME TO %s",
-                                            quote_ident(indexName),
-                                            quote_ident(newName));
-        this.runSQLStatement(query, databaseName, userName, password);
+        String query = "ALTER INDEX ? RENAME TO ?";
+        List<Object> parameters = createParameterList ( indexName, newName);
+        this.runJDBCQuery(query, parameters, server, databaseName);
 
 
 	}
@@ -108,13 +108,13 @@ public class IndexServiceImpl extends StructureServiceImpl
 	@Override
 	public void deleteIndex(int dbId, String instance, String tableName,
 			String indexName, boolean staging) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
-        String query = String.format("DROP index %s",
-                quote_ident(indexName));
-        this.runSQLStatement(query, databaseName, userName, password);
-
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String server = database.getDatabaseServer();
+		this.runJDBCQuery("DROP index ?", createParameterList(indexName), server, databaseName);
 	}
 
 }

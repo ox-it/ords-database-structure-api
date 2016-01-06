@@ -16,6 +16,8 @@
 
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
+import java.util.List;
+
 import javax.ws.rs.NotFoundException;
 
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
@@ -56,10 +58,9 @@ public class CommentServiceImpl extends StructureServiceImpl
 		if (!this.checkTableExists(tableName, databaseName, server, userName, password)) {
 			throw new NotFoundException();
 		}
-		String statement = String.format("COMMENT ON TABLE %s IS %s",
-				quote_ident(tableName),
-				quote_literal(comment));
-		this.runSQLStatement(statement, databaseName, userName, password);
+		String statement = "COMMENT ON TABLE ? IS ?";
+		List<Object> parameters = this.createParameterList(tableName, comment);
+		this.runJDBCQuery(statement, parameters, server, databaseName);
 	}
 
 	@Override
@@ -93,13 +94,10 @@ public class CommentServiceImpl extends StructureServiceImpl
 		if ( !this.checkColumnExists(columnName, tableName, databaseName, server, userName, password)){
 			throw new NotFoundException();
 		}
-		String identifier = String.format("%s.%s", 
-                quote_ident(tableName), 
-                quote_ident(columnName));
-		String statement = String.format("COMMENT ON COLUMN %s IS %s",
-				identifier,
-				quote_literal(comment));
-		this.runSQLStatement(statement, databaseName, userName, password);
+		this.runJDBCQuery("COMMENT ON COLUMN ? IS ?",
+				createParameterList(tableName+"."+columnName, comment),
+				server,
+				databaseName);
 	
 	}
 
