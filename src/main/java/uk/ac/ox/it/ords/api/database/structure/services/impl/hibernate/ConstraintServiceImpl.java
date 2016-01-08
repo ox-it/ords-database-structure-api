@@ -139,18 +139,18 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 		// Generate the SQL for creating the constraint
 		ArrayList<Object> parameters = new ArrayList<Object>();
 		if (isUnique != null && isUnique) {
-			if (isUnique != null && isUnique) {
-				query = "ALTER TABLE ? ADD CONSTRAINT ? UNIQUE (?)";
-				parameters.add(tableName);
-				parameters.add(uniqueConstraintName);
-				parameters.add(columns);
-			} else if (isPrimary != null && isPrimary) {
-				query = "ALTER TABLE ? ADD CONSTRAINT ? PRIMARY KEY (?)";
-				parameters.add(tableName);
-				parameters.add(uniqueConstraintName);
-				parameters.add(columns);
-			}
-		} else if (isForeign != null && isForeign) {
+			query = "ALTER TABLE ? ADD CONSTRAINT ? UNIQUE (?)";
+			parameters.add(tableName);
+			parameters.add(uniqueConstraintName);
+			parameters.add(columns);
+		} 
+		else if (isPrimary != null && isPrimary) {
+			query = "ALTER TABLE ? ADD CONSTRAINT ? PRIMARY KEY (?)";
+			parameters.add(tableName);
+			parameters.add(uniqueConstraintName);
+			parameters.add(columns);
+		} 
+		else if (isForeign != null && isForeign) {
 			String column = newConstraint.getColumn();
 			String refTable = newConstraint.getReftable();
 
@@ -177,7 +177,8 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 			parameters.add(column);
 			parameters.add(refTable);
 			parameters.add(refColumn);
-		} else {
+		} 
+		else {
 			// If this isn't a Unique, Foreign or Primary key constraint
 			// make sure a check expression is defined and generate the
 			// SQL. Check constraints currently aren't implemented in

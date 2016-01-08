@@ -20,6 +20,7 @@ package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.sql.rowset.CachedRowSet;
 import javax.ws.rs.NotFoundException;
 
 import org.hibernate.Criteria;
@@ -102,39 +103,21 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 		if ( this.checkTableExists(tableNewName, databaseName,server, userName, password)){
 			throw new NamingConflictException("There is already a table called "+tableNewName+" in database "+databaseName);
 		}
-		String query = "ALTER TABLE ? RENAME TO ?;";
-		List<Object> parameters = createParameterList(tableName, tableNewName );
-		this.runJDBCQuery(query, parameters, server, databaseName);
+		String query = String.format("ALTER TABLE %s RENAME TO %s;", quote_ident(tableName), quote_ident(tableNewName));
+		this.runJDBCQuery(query, null, server, databaseName);
 
-        query = String.format("SELECT sequence_name FROM information_schema.sequences where sequence_name LIKE %s",
-        		quote_ident(tableName+"%"));
-        Session session = this.getOrdsDBSessionFactory().openSession();
+        query = "SELECT sequence_name FROM information_schema.sequences where sequence_name LIKE ?";
+        List<Object> parameters = this.createParameterList(tableName+"%");
+        CachedRowSet result = this.runJDBCQuery(query, parameters, server, databaseName);
         
-        try {
-        	Transaction transaction = session.beginTransaction();
-        	SQLQuery sqlQuery = session.createSQLQuery(query);
-        	String sequenceName = sqlQuery.uniqueResult().toString();
-        	if (sequenceName != null ) {
-        		
-                String newSequenceName = sequenceName.replace(tableName, tableNewName);
-                query = String.format("ALTER SEQUENCE %s RENAME TO %s",
-                                        quote_ident(sequenceName),
-                                        quote_ident(newSequenceName));
-                SQLQuery sqlAlter = session.createSQLQuery(query);
-                sqlAlter.executeUpdate();
-            }
-        	transaction.commit();
+        if ( result.first() ) {
+        	String sequenceName = result.getString("sequence_name");
+        	String newSequenceName = sequenceName.replace(tableName, tableNewName);
+        	query = String.format("ALTER SEQUENCE %s RENAME TO %s",
+                    quote_ident(sequenceName),
+                    quote_ident(newSequenceName));
+        	this.runJDBCQuery(query, null, server, databaseName);
         }
-		catch (Exception e) {
-			log.debug(e.getMessage());
-			session.getTransaction().rollback();
-			throw e;
-		}
-		finally {
-			session.close();
-		}
-
-		
 	}
 
 	@Override
@@ -151,8 +134,10 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 		if ( !this.checkTableExists(tableName, databaseName, server, userName, password)) {
 			throw new NotFoundException(String.format("No table called %s found in database %s", tableName, databaseName));
 		}
-		this.runJDBCQuery("DROP TABLE ?", createParameterList(tableName), server, databaseName);
+		this.runJDBCQuery(String.format("DROP TABLE %s", tableName), null, server, databaseName);
 	}
+	
+	
 
 	@Override
 	public void setTablePositions(int dbId, String instance,

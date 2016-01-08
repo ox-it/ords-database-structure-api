@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
+import javax.sql.rowset.CachedRowSet;
 import javax.ws.rs.NotFoundException;
 
 import org.hibernate.Transaction;
@@ -175,48 +176,35 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 						"Only integer fields can have auto-increment enabled");
 			}
 		}
-
-		// start the transaction
 		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		String databaseName = this
-				.dbNameFromIDInstance(dbId, instance, staging);
-		Session session = this.getUserDBSessionFactory(databaseName, userName,
-				password).openSession();
-		try {
-			Transaction tx = session.beginTransaction();
-
-			String query;
-			// do all the stuff
-			if (autoinc) {
-				query = String.format("CREATE SEQUENCE %s", sequenceName);
-				session.createSQLQuery(query).executeUpdate();
-				query = String.format("ALTER SEQUENCE %s OWNER TO %s", 
-                        sequenceName,
-                        userName);
-				session.createSQLQuery(query).executeUpdate();
-			}
-			String constraints = nullConstraint + defaultConstraint;
-			query = String.format("ALTER TABLE %s ADD COLUMN %s %s %s;",
-					quote_ident(tableName), quote_ident(columnName), datatype,
-					constraints);
-			session.createSQLQuery(query).executeUpdate();
-			if (autoinc) {
-				query = String.format("ALTER SEQUENCE %s OWNED BY %s.%s",
-						sequenceName, quote_ident(tableName), quote_ident(columnName));
-				session.createSQLQuery(query).executeUpdate();
-
-			}
-			tx.commit();
-		} catch (Exception e) {
-			log.debug(e.getMessage());
-			session.getTransaction().rollback();
-			throw e;
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		String databaseName = database.getDbConsumedName();
+		if ( staging ) {
+			databaseName = this.calculateStagingName(databaseName);
 		}
-		finally {
-			session.close();
-		}
+		String server = database.getDatabaseServer();
+	
+		ArrayList<String> statements = new ArrayList<String>();
+		if ( autoinc ) {
+			statements.add(String.format("CREATE SEQUENCE %s", sequenceName));
+			statements.add(String.format("ALTER SEQUENCE %s OWNER TO %s", 
+                                                sequenceName,
+                                                userName));
 
+		}
+		String constraints = nullConstraint+defaultConstraint;
+        statements.add( String.format("ALTER TABLE %s ADD COLUMN %s %s %s;", 
+                                quote_ident(tableName), 
+                                quote_ident(columnName), 
+                                datatype,
+                                constraints));
+		if (autoinc) {
+			statements.add(String.format("ALTER SEQUENCE %s OWNED BY %s.%s",
+                    sequenceName,
+                    quote_ident(tableName),
+                    quote_ident(columnName)));
+		}
+		this.runSQLStatements(statements, server, databaseName);
 	}
 
 	public void updateColumn(int dbId, String instance, String tableName,
@@ -266,19 +254,16 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 				}
 				// Get the data type and any current sequence for the
 				// column.
-				String command = String
-						.format("SELECT data_type, pg_get_serial_sequence(%s, %s) AS sequence"
-								+ " FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = %s"
-								+ " AND column_name = %s",
-								quote_ident(tableName),
-								quote_ident(columnName),
-								quote_ident(tableName), quote_ident(columnName));
-				@SuppressWarnings("rawtypes")
-				List rows = this.runSQLQuery(command, databaseName, userName,
-						password);
-				Object[] cols = (Object[]) rows.get(0);
-				String currentDatatype = cols[0].toString();
-				sequenceName = cols[1].toString();
+				String command = "SELECT data_type, pg_get_serial_sequence(?, ?) AS sequence"
+								+ " FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = ?"
+								+ " AND column_name = ?";
+				List<Object> parameters = this.createParameterList(tableName, columnName, tableName, columnName);
+				CachedRowSet results = this.runJDBCQuery(command, parameters, server, databaseName);
+				String currentDatatype = "";
+				while (results.next()) {
+					currentDatatype = results.getString("data_type");
+					sequenceName = results.getString("sequence");
+				}
 				if (sequenceName != null && !sequenceName.isEmpty()) {
 					message = String
 							.format("Cannot add auto-increment to field %s: it is already auto-incremented",
@@ -304,18 +289,14 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 			} else {
 				// If we're "disabling" autoincrement, check that there's
 				// an existing sequence to remove.
-				String command = String.format(
-						"SELECT pg_get_serial_sequence(%s, %s) AS sequence",
-						quote_ident(tableName), quote_ident(columnName));
-				@SuppressWarnings("rawtypes")
-				List rows = this.runSQLQuery(command, databaseName, userName,
-						password);
-				Object[] cols = (Object[]) rows.get(0);
-				sequenceName = cols[0].toString();
-				if (sequenceName.isEmpty()) {
+				String command = "SELECT pg_get_serial_sequence(?, ?) AS sequence";
+				List<Object> parameters = this.createParameterList(tableName, columnName);
+				CachedRowSet results = this.runJDBCQuery(command, parameters, server, databaseName);
+				if ( !results.first() ) {
 					log.error("Attempt to remove autoincrement where non is set");
 					throw new BadParameterException(
 							"Auto-increment is not set so cannot be removed");
+					
 				}
 			}
 		}
@@ -348,25 +329,25 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 				message += String.format("Field %s now nullable", columnName)
 						+ "\n";
 			}
-			query = String.format("ALTER TABLE %s ALTER %s %s NOT NULL;",
-					quote_ident(tableName), quote_ident(columnName), operation);
-			ArrayList<String> list = new ArrayList<String>();
-			list.add(query);
-			this.runSQLStatements(list, databaseName, userName, password);
+			query = String.format("ALTER TABLE %s ALTER %s %s NOT NULL;", 
+                    quote_ident(tableName), 
+                    quote_ident(columnName), 
+                    operation);
+			this.runJDBCQuery(query, null, server, databaseName);
 		}
 		ArrayList<String> statements = new ArrayList<String>();
 		if (datatype != null && !datatype.isEmpty()) {
 			// If the data type is being altered get the existing data type
 			String convertedCol = quote_ident(columnName);
-			String command = String.format("SELECT data_type"
-					+ " FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = %s"
-					+ " AND column_name = %s", quote_ident(tableName),
-					quote_ident(columnName));
-			@SuppressWarnings("rawtypes")
-			List rows = this.runSQLQuery(command, databaseName, userName,
-					password);
-			Object[] cols = (Object[]) rows.get(0);
-			String fromDataType = cols[0].toString();
+			String command = "SELECT data_type"
+					+ " FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = ?"
+					+ " AND column_name = ?";
+			List<Object> parameters = this.createParameterList(tableName, columnName);
+			CachedRowSet results = this.runJDBCQuery(command, parameters, server, databaseName);
+			String fromDataType = "";
+			while ( results.next()) {
+				fromDataType = results.getString("data_type");
+			}
 			if (fromDataType.equals("integer") || fromDataType.equals("bigint")) {
 				if (datatype.toLowerCase().contains("date")
 						|| datatype.toLowerCase().contains("time")) {
@@ -383,11 +364,11 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 			}
 			datatype = SqlDesignerTranslations
 					.convertDatatypeForPostgres(request.getDatatype());
-			query = String
-					.format("ALTER TABLE %1$s ALTER %2$s TYPE %3$s USING CAST(%4$s AS %3$s)",
-							quote_ident(tableName), quote_ident(columnName),
-							datatype, convertedCol);
-			statements.add(query);
+			statements.add(String.format("ALTER TABLE %1$s ALTER %2$s TYPE %3$s USING CAST(%4$s AS %3$s)",
+                    quote_ident(tableName),
+                    quote_ident(columnName),
+                    datatype,
+                    convertedCol));
 		}
 
 		if (autoinc != null) {
@@ -397,24 +378,27 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 				// and attach it to the column, then alter the default
 				// value of the column to the next value in the sequence
 				sequenceName = generateSequenceName(tableName, columnName);
-				statements.add(String.format("CREATE SEQUENCE %s",
-						quote_ident(sequenceName)));
-				statements.add(String.format(
-						"ALTER SEQUENCE %s OWNED BY %s.%s",
-						quote_ident(sequenceName), quote_ident(tableName),
-						quote_ident(columnName)));
-				statements.add(String.format(
-						"ALTER TABLE %s ALTER %s SET DEFAULT nextval('%s')",
-						quote_ident(tableName), quote_ident(columnName),
-						sequenceName));
+				statements.add(String.format("CREATE SEQUENCE %s", quote_ident(sequenceName)));
+
+				statements.add( String.format("ALTER SEQUENCE %s OWNED BY %s.%s", 
+                        quote_ident(sequenceName),
+                        quote_ident(tableName),
+                        quote_ident(columnName) ) );
+
+				statements.add( String.format("ALTER TABLE %s ALTER %s SET DEFAULT nextval('%s')", 
+                        quote_ident(tableName),
+                        quote_ident(columnName),
+                        sequenceName));
+
 				// message += String.format(emd.getMessage("Rst066").getText(),
 				// columnName);
 			} else {
 				// If we're disabling autoincrement, remove the default
 				// value and drop the sequence.
-				statements.add(String.format(
-						"ALTER TABLE %s ALTER %s DROP DEFAULT",
-						quote_ident(tableName), quote_ident(columnName)));
+				statements.add(String.format("ALTER TABLE %s ALTER %s DROP DEFAULT",
+                        quote_ident(tableName),
+                        quote_ident(columnName)));
+				
 				statements.add(String.format("DROP SEQUENCE %s", sequenceName));
 				// message += String.format(emd.getMessage("Rst067").getText(),
 				// columnName);
@@ -425,16 +409,17 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 		// an autoinc and adding a default.
 		if (defaultValue != null) {
 			if (defaultValue.isEmpty()) {
-				statements.add(String.format(
-						"ALTER TABLE %s ALTER %s DROP DEFAULT",
-						quote_ident(tableName), quote_ident(columnName)));
+				statements.add(String.format("ALTER TABLE %s ALTER %s DROP DEFAULT",
+                        quote_ident(tableName),
+                        quote_ident(columnName)));
+
 				// message += String.format(emd.getMessage("Rst023").getText(),
 				// columnName)+"\n";
 			} else {
-				statements.add(String.format(
-						"ALTER TABLE %s ALTER %s SET DEFAULT %s",
-						quote_ident(tableName), quote_ident(columnName),
-						quote_literal(defaultValue)));
+				statements.add(String.format("ALTER TABLE %s ALTER %s SET DEFAULT %s",
+                        quote_ident(tableName),
+                        quote_ident(columnName),
+                        quote_literal(defaultValue)));
 				// message += String.format(emd.getMessage("Rst024").getText(),
 				// columnName,
 				// defaultValue)+"\n";
@@ -443,15 +428,17 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 		// Always do the rename last so that everything else works.
 		if (newName != null && !newName.isEmpty()) {
 
-			statements.add(String.format("ALTER TABLE %s RENAME %s to %s;",
-					quote_ident(tableName), quote_ident(columnName),
-					quote_ident(newName)));
+			statements.add(String.format("ALTER TABLE %s RENAME %s to %s;", 
+                    quote_ident(tableName), 
+                    quote_ident(columnName), 
+                    quote_ident(newName)));
+
 			// message += String.format(emd.getMessage("Rst019").getText(),
 			// columnName, newName)+"\n";
 		}
 
 		// run em in 1 go
-		this.runSQLStatements(statements, databaseName, userName, password);
+		this.runSQLStatements(statements, server, databaseName);
 	}
 
 	public void deleteColumn(int dbId, String instance, String tableName,

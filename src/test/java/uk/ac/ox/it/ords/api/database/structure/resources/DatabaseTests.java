@@ -32,6 +32,7 @@ import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.IndexRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.TablePosition;
+import uk.ac.ox.it.ords.api.database.structure.dto.TableRenameRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 
@@ -96,107 +97,154 @@ public class DatabaseTests extends AbstractResourceTest {
 		logout();
 	}
 	
+	@Test
+	public void testTables() {
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, 1305, "localhost");
+		Response response = getClient().path("/0/MAIN").post(dbr);
+		assertEquals(201, response.getStatus());
+		
+		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(db);
+		
+		int dbID = db.getPhysicalDatabaseId();
+		
+		
+		// do stuff
+		
+		// Create a table
+		response = getClient().path("/"+dbID+"/MAIN/table/dummy/false").post(null);
+		assertEquals(201, response.getStatus());
+		
+		// rename the table
+		TableRenameRequest tnr = new TableRenameRequest();
+		tnr.setNewname("clever");
+		
+		response = getClient().path("/"+dbID+"/MAIN/table/dummy/false").put(tnr);
+		assertEquals(200, response.getStatus());
+		
+		// get the renamed table
+		response = getClient().path("/"+dbID+"/MAIN/table/clever/false").get();
+		assertEquals(200, response.getStatus());
+		
+		// delete the table
+		response = getClient().path("/"+dbID+"/MAIN/table/clever/false").delete();
+		assertEquals(200, response.getStatus());
+		
+		
+		// delete the original
+		response = getClient().path("/"+dbID+"/MAIN").delete();
+		assertEquals(200, response.getStatus());
+		
+		logout();		
+	}
+	
 	
 	@Test
 	public void testIntegratedBuildTable() {
 
-			loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-			DatabaseRequest dbr = this.buildDatabaseRequest(null, 1205, "localhost");
-			Response response = getClient().path("/0/MAIN").post(dbr);
-			assertEquals(201, response.getStatus());
-			
-			OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
-			assertNotNull(db);
-			
-			// Strip the id from the end of the path
-			int dbID = db.getPhysicalDatabaseId();
-			
-			// Create a table
-			response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
-			assertEquals(201, response.getStatus());
-			
-			// build a column
-			ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
-			// Create a column
-			response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
-			assertEquals(201, response.getStatus());
-			
-			// build another column
-			ColumnRequest column2 = this.buildColumnRequest("id", "int", null, false, true);
-			response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/id/false").post(column2);
-			assertEquals(201, response.getStatus());
-			
-			// try making a foreign key
-			// build another table
-			response = getClient().path("/"+dbID+"/MAIN/table/linkTable/false").post(null);
-			assertEquals(201, response.getStatus());
-			
-			// and a column to link
-			ColumnRequest linkColumn = this.buildColumnRequest("other_id", "int", null, true, false);
-			response = getClient().path("/"+dbID+"/MAIN/table/linkTable/column/other_id/false").post(linkColumn);
-			assertEquals(201, response.getStatus());
-			
-			
-			// set the position of the tables for schema designer
-			ArrayList<TablePosition> tablePositionsArray = new ArrayList<TablePosition>();
-			TablePosition linkTablePosition = new TablePosition();
-			linkTablePosition.setTablename("linkTable");
-			linkTablePosition.setX(120);
-			linkTablePosition.setY(120);
-			TablePosition testTablePosition = new TablePosition();
-			testTablePosition.setTablename("testTable");
-			testTablePosition.setX(240);
-			testTablePosition.setY(240);
-			tablePositionsArray.add(linkTablePosition);
-			tablePositionsArray.add(testTablePosition);
-			PositionRequest positions = new PositionRequest();
-			positions.setPositions(tablePositionsArray);
-			
-			response = getClient().path("/"+dbID+"/MAIN/positions").put(positions);
-			assertEquals(200, response.getStatus());
-			
-			// create to the relationship as a constraint
-			ArrayList<String> columns = new ArrayList<String>();
-			columns.add("other_id");
-			ConstraintRequest constraint = this.buildConstraintRequest("link_constraint", constraint_type.FOREIGN, columns, "testTable", "id");
-			response = getClient().path("/"+dbID+"/MAIN/table/linkTable/constraint/link_constraint/false").post(constraint);
-			assertEquals(201, response.getStatus());
-			
-			// set a table comment
-			String comment = "A bi££are cømment";
-			CommentRequest commentRequest = this.buildCommentRequest(comment);
-			response = getClient().path("/"+dbID+"/MAIN/table/testTable/comment/false").post(commentRequest);
-			assertEquals(201, response.getStatus());
-			
-			// set a column comment
-			response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/comment/false").post(commentRequest);
-			assertEquals(201, response.getStatus());
-			
-			
-			// create an index
-			columns.clear();
-			columns.add("testColumn");
-			IndexRequest index = this.buildIndexRequest("testIndex", false, columns);
-			response = getClient().path("/"+dbID+"/MAIN/table/testTable/index/testIndex/false").post(index);
-			assertEquals(201, response.getStatus());
-			
-			
-			
-			// get the whole database structure
-			response = getClient().path("/"+dbID+"/MAIN").get();
-			assertEquals(200, response.getStatus());
-			TableList tableList = (TableList)response.readEntity(TableList.class);
-			@SuppressWarnings("rawtypes")
-			HashMap tables = tableList.getTables();
-			assertEquals(2, tables.size());
-			
-			
-			// delete the original
-			response = getClient().path("/"+dbID+"/MAIN").delete();
-			assertEquals(200, response.getStatus());
-			
-			logout();
-		}
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, 1205, "localhost");
+		Response response = getClient().path("/0/MAIN").post(dbr);
+		assertEquals(201, response.getStatus());
+		
+		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(db);
+		
+		// Strip the id from the end of the path
+		int dbID = db.getPhysicalDatabaseId();
+		
+		// Create a table
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
+		assertEquals(201, response.getStatus());
+		
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
+		// Create a column
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		// build another column
+		ColumnRequest column2 = this.buildColumnRequest("id", "int", null, false, true);
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/id/false").post(column2);
+		assertEquals(201, response.getStatus());
+		
+		// try making a foreign key
+		// build another table
+		response = getClient().path("/"+dbID+"/MAIN/table/linkTable/false").post(null);
+		assertEquals(201, response.getStatus());
+		
+		// and a column to link
+		ColumnRequest linkColumn = this.buildColumnRequest("other_id", "int", null, true, false);
+		response = getClient().path("/"+dbID+"/MAIN/table/linkTable/column/other_id/false").post(linkColumn);
+		assertEquals(201, response.getStatus());
+		
+		
+		// set the position of the tables for schema designer
+		ArrayList<TablePosition> tablePositionsArray = new ArrayList<TablePosition>();
+		TablePosition linkTablePosition = new TablePosition();
+		linkTablePosition.setTablename("linkTable");
+		linkTablePosition.setX(120);
+		linkTablePosition.setY(120);
+		TablePosition testTablePosition = new TablePosition();
+		testTablePosition.setTablename("testTable");
+		testTablePosition.setX(240);
+		testTablePosition.setY(240);
+		tablePositionsArray.add(linkTablePosition);
+		tablePositionsArray.add(testTablePosition);
+		PositionRequest positions = new PositionRequest();
+		positions.setPositions(tablePositionsArray);
+		
+		response = getClient().path("/"+dbID+"/MAIN/positions").put(positions);
+		assertEquals(200, response.getStatus());
+		
+		// create to the relationship as a constraint
+		ArrayList<String> columns = new ArrayList<String>();
+		columns.add("other_id");
+		ConstraintRequest constraint = this.buildConstraintRequest("link_constraint", constraint_type.FOREIGN, columns, "testTable", "id");
+		response = getClient().path("/"+dbID+"/MAIN/table/linkTable/constraint/link_constraint/false").post(constraint);
+		assertEquals(201, response.getStatus());
+		
+		// set a table comment
+		String comment = "A bi££are cømment";
+		CommentRequest commentRequest = this.buildCommentRequest(comment);
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/comment/false").post(commentRequest);
+		assertEquals(201, response.getStatus());
+		
+		// set a column comment
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/comment/false").post(commentRequest);
+		assertEquals(201, response.getStatus());
+		
+		
+		// create an index
+		columns.clear();
+		columns.add("testColumn");
+		IndexRequest index = this.buildIndexRequest("testIndex", false, columns);
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/index/testIndex/false").post(index);
+		assertEquals(201, response.getStatus());
+		
+		
+		
+		// get the whole database structure
+		response = getClient().path("/"+dbID+"/MAIN").get();
+		assertEquals(200, response.getStatus());
+		TableList tableList = (TableList)response.readEntity(TableList.class);
+		@SuppressWarnings("rawtypes")
+		HashMap tables = tableList.getTables();
+		assertEquals(2, tables.size());
+		
+		
+		// delete the original
+		response = getClient().path("/"+dbID+"/MAIN").delete();
+		assertEquals(200, response.getStatus());
+		
+		logout();
+	}
+	
+	
+	
+	
+	
 	
 	
 	private ColumnRequest buildColumnRequest ( String name, String dataType, String defaultValue, boolean nullable, boolean autoIncrement  ){

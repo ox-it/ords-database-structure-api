@@ -335,30 +335,7 @@ public class StructureServiceImpl {
 		}
 	}
 
-	protected void runSQLStatements(List<String> statements,
-			String databaseName, String userName, String password) {
-		Session session;
-		if (databaseName == null) {
-			session = this.getOrdsDBSessionFactory().openSession();
-		} else {
-			session = this.getUserDBSessionFactory(databaseName, userName,
-					password).openSession();
-		}
-		try {
-			Transaction transaction = session.beginTransaction();
-			for (String statement : statements) {
-				SQLQuery query = session.createSQLQuery(statement);
-				query.executeUpdate();
-			}
-			transaction.commit();
-		} catch (Exception e) {
-			log.debug(e.getMessage());
-			session.getTransaction().rollback();
-			throw e;
-		} finally {
-			session.close();
-		}
-	}
+
 
 	protected void saveModelObject(Object objectToSave) throws Exception {
 		Session session = this.getOrdsDBSessionFactory().openSession();
@@ -537,7 +514,7 @@ public class StructureServiceImpl {
 		String password = this.getODBCPassword();
 		// Get a complete description of the table columns
 		List<HashMap<String, String>> columns = this.getTableDescription(
-				databaseName, tableName, userName, password);
+				databaseName, tableName, databaseServer, userName, password);
 
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("We have %d rows", columns.size()));
@@ -602,7 +579,7 @@ public class StructureServiceImpl {
 			HashMap<String, HashMap<String, String>> foreignTableColumnMap = new HashMap<String, HashMap<String, String>>();
 			List<HashMap<String, String>> foreignTableColumns = this
 					.getTableDescription(databaseName,
-							(String) foreignKey.get("foreignTableName"),
+							(String) foreignKey.get("foreignTableName"), databaseServer,
 							userName, password);
 			if (foreignTableColumns != null) {
 				for (HashMap entry : foreignTableColumns) {
@@ -720,7 +697,7 @@ public class StructureServiceImpl {
 	}
 
 	public List<HashMap<String, String>> getTableDescription(
-			String databaseName, String tableName, String userName,
+			String databaseName, String tableName, String server, String userName,
 			String password) throws Exception {
 		log.debug("getTableDescription");
 
@@ -734,26 +711,24 @@ public class StructureServiceImpl {
 		fields.add("is_nullable");
 		fields.add("ordinal_position");
 
-		String command = String
+		String query = String
 				.format("select %s from INFORMATION_SCHEMA.COLUMNS where table_name = %s ORDER BY ordinal_position ASC",
 						StringUtils.join(fields.iterator(), ","),
 						quote_literal(tableName));
 
 		HashMap<String, String> columnDescription;
 		List<HashMap<String, String>> columnDescriptions = new ArrayList<HashMap<String, String>>();
-		@SuppressWarnings("unchecked")
-		List<Object[]> rows = this.runSQLQuery(command, databaseName, userName,
-				password);
+		CachedRowSet results = this.runJDBCQuery(query, null, server, databaseName);
+		
 
 		// First get all column names
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("Found columns for table %s", tableName));
 		}
-		for (Object[] row : rows) {
+		while (results.next()) {
 			columnDescription = new HashMap<String, String>();
-			int i = 0;
 			for (String field : fields) {
-				Object c = row[i++];
+				Object c = results.getObject(field);
 				if (c != null) {
 					columnDescription.put(field, c.toString());
 				} else {
@@ -871,6 +846,45 @@ public class StructureServiceImpl {
 			parameters.add(p);
 		}
 		return parameters;
+	}
+	
+	protected void runSQLStatements(List<String> statements, String server,
+			String databaseName) throws Exception {
+		Connection connection = null;
+		Properties connectionProperties = new Properties();
+		PreparedStatement preparedStatement = null;
+		if ( server != null ){
+			
+			String userName = this.getODBCUserName();
+			String password = this.getODBCPassword();
+			connectionProperties.put("user", userName);
+			connectionProperties.put("password", password);
+		}
+		else {
+			// get the ords database configuration
+			Configuration config = MetaConfiguration.getConfiguration();
+			connectionProperties.put("user", config.getString(StructureServiceImpl.ORDS_DATABASE_USER));
+			connectionProperties.put("password", config.getString(StructureServiceImpl.ORDS_DATABASE_PASSWORD));
+			server = config.getString(StructureServiceImpl.ORDS_DATABASE_HOST);
+		}
+		String connectionURL = "jdbc:postgresql://" + server + "/"
+				+ databaseName;
+		try {
+			connection = DriverManager.getConnection(connectionURL,
+					connectionProperties);
+			for (String statement: statements ) {
+				preparedStatement = connection.prepareStatement(statement);
+				preparedStatement.execute();
+			}
+		}
+		finally {
+			if (preparedStatement != null) {
+				preparedStatement.close();
+			}
+			if (connection != null) {
+				connection.close();
+			}
+		}
 	}
 
 	protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,

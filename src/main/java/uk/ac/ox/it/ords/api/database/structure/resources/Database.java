@@ -133,6 +133,7 @@ public class Database extends AbstractResource{
 	
 	@DELETE
 	@Path("{id}/{instance}")
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response dropDatabase (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance ) {		
@@ -175,6 +176,7 @@ public class Database extends AbstractResource{
 	
 	@POST
 	@Path("{id}/{instance}/staging")
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response createStagingDatabase (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -198,6 +200,7 @@ public class Database extends AbstractResource{
 	@PUT
 	@Path("{id}/{instance}/staging")
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response updateDatabaseMetadata (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance ) {
@@ -218,6 +221,7 @@ public class Database extends AbstractResource{
 	
 	@DELETE
 	@Path("{id}/{instance}/staging")
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response dropStaginDatabase (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance ) {
@@ -244,6 +248,7 @@ public class Database extends AbstractResource{
 	@PUT
 	@Path("{id}/{instance}/positions")
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response saveTablePositions (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -294,6 +299,7 @@ public class Database extends AbstractResource{
 	
 	@POST
 	@Path("{id}/{instance}/table/{tablename}/{staging}")
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response createNewTable ( 
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -318,6 +324,7 @@ public class Database extends AbstractResource{
 	
 	@PUT
 	@Path("{id}/{instance}/table/{tablename}/{staging}")
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response updateTableName ( 
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -341,6 +348,7 @@ public class Database extends AbstractResource{
 	
 	@DELETE
 	@Path("{id}/{instance}/table/{tablename}/{staging}")
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response deleteTable ( 
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -398,6 +406,7 @@ public class Database extends AbstractResource{
 	@POST
 	@Path("{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response createColumn (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -426,6 +435,7 @@ public class Database extends AbstractResource{
 	@PUT
 	@Path("{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response updateColumn (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -449,6 +459,7 @@ public class Database extends AbstractResource{
 	
 	@DELETE
 	@Path("{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response deleteColumn (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -502,6 +513,7 @@ public class Database extends AbstractResource{
 	@PUT
 	@Path("{id}/{instance}/table/{tablename}/comment/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response setTableComment (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -554,6 +566,7 @@ public class Database extends AbstractResource{
 	@PUT
 	@Path("{id}/{instance}/table/{tablename}/column/{columnName}/comment/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response setColumnComment (
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -620,6 +633,7 @@ public class Database extends AbstractResource{
 	@POST
 	@Path("{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response createTableConstraint ( 
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -648,6 +662,7 @@ public class Database extends AbstractResource{
 	@PUT
 	@Path("{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response updateTableConstraint ( 
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -671,6 +686,7 @@ public class Database extends AbstractResource{
 	
 	@DELETE
 	@Path("/constraint/database/{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response deleteTableConstraint ( 
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -723,6 +739,7 @@ public class Database extends AbstractResource{
 	@POST
 	@Path("{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response createIndex (  
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -750,6 +767,7 @@ public class Database extends AbstractResource{
 	@PUT
 	@Path("{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response updateIndex (  
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -773,6 +791,7 @@ public class Database extends AbstractResource{
 	
 	@DELETE
 	@Path("{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
+	@Produces( MediaType.APPLICATION_JSON )
 	public Response deleteIndex (  
 			@PathParam("id") int dbId,
 			@PathParam("instance") String instance,
@@ -792,7 +811,4 @@ public class Database extends AbstractResource{
 			return this.handleException(e);
 		}
 	}
-	
-	
-	
 }

@@ -81,13 +81,13 @@ public class AbstractResource {
 	
 	protected Response handleException ( Exception e ) {
 		if ( e instanceof BadParameterException ) {
-			return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+			return Response.status(Response.Status.BAD_REQUEST).entity(e).build();
 		}
 		else if ( e instanceof NamingConflictException ) {
-			return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
+			return Response.status(Response.Status.CONFLICT).entity(e).build();
 		}
 		else {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
 		}
 	}
 	

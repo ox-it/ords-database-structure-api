@@ -17,14 +17,16 @@
 package uk.ac.ox.it.ords.api.database.structure.exceptions;
 
 public class NamingConflictException extends Exception {
-
-	public NamingConflictException(String string) {
-		super(string);
-	}
-
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -8632160292004237293L;
 
+	public NamingConflictException() {
+		super();
+	}
+	
+	public NamingConflictException(String string) {
+		super(string);
+	}
 }

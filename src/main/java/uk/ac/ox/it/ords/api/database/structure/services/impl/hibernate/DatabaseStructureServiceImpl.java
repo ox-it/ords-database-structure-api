@@ -234,11 +234,9 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		//String createSequence = String.format("CREATE SEQUENCE %s",
 		//quote_ident(sequenceName));
 		//this.runSQLStatement(createSequence, stagingName, userName, password);
-		String sequenceName = "ords_constraint_seq";
-		String createSequence = "CREATE SEQUENCE ?";
-		List<Object> parameters = this.createParameterList(sequenceName);
+		String createSequence = "CREATE SEQUENCE ords_constraint_seq";
 		String server = database.getDatabaseServer();
-		this.runJDBCQuery(createSequence, parameters, server, stagingName);
+		this.runJDBCQuery(createSequence, null, server, stagingName);
 		
 		
 		return stagingName;
@@ -336,11 +334,9 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 					dbName, userName);
 
 			this.runSQLStatementOnOrdsDB(statement);
-			String sequenceName = "ords_constraint_seq";
-			String createSequence = "CREATE SEQUENCE ?";
-			List<Object> parameters = this.createParameterList(sequenceName);
+			String createSequence = "CREATE SEQUENCE ords_constraint_seq";
 			String server = db.getDatabaseServer();
-			this.runJDBCQuery(createSequence, parameters, server, dbName);
+			this.runJDBCQuery(createSequence, null, server, dbName);
 
 			return db;
 		}

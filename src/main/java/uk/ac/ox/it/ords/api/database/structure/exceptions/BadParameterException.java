@@ -21,7 +21,11 @@ public class BadParameterException extends Exception {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1523339079126963534L;
+
+	public BadParameterException() {
+		super();
+	}
 	
 	public BadParameterException(String message) {
 		super(message);
