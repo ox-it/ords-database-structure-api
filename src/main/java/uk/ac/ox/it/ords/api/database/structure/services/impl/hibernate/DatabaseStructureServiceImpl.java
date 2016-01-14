@@ -164,11 +164,14 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	@Override
 	public TableList getDatabaseTableList(int dbId, String instance,
 			boolean staging) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
+//		String userName = this.getODBCUserName();
+//		String password = this.getODBCPassword();
 		// we need to get the physical database this time because we need it's
 		// id later
 		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+		if ( database == null ) {
+			throw new NotFoundException();
+		}
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);

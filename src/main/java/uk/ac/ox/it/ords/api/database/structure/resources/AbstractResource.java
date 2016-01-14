@@ -16,6 +16,7 @@
 
 package uk.ac.ox.it.ords.api.database.structure.resources;
 
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
 
 import org.apache.shiro.SecurityUtils;
@@ -85,6 +86,9 @@ public class AbstractResource {
 		}
 		else if ( e instanceof NamingConflictException ) {
 			return Response.status(Response.Status.CONFLICT).entity(e).build();
+		}
+		else if ( e instanceof NotFoundException ) {
+			return Response.status(Response.Status.NOT_FOUND).entity(e).build();
 		}
 		else {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e).build();
