@@ -55,7 +55,7 @@ public class StructureServiceImpl {
 	Logger log = LoggerFactory.getLogger(StructureServiceImpl.class);
 	protected static String ODBC_MASTER_PASSWORD_PROPERTY = "ords.odbc.masterpassword";
 	protected static String ORDS_DATABASE_NAME = "ords.database.name";
-	protected static String ORDS_DATABASE_USER = "ords.database.username";
+	protected static String ORDS_DATABASE_USER = "ords.database.user";
 	protected static String ORDS_DATABASE_PASSWORD = "ords.database.password";
 	protected static String ORDS_DATABASE_HOST = "ords.database.server.host";
 
