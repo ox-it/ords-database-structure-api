@@ -36,7 +36,7 @@ import uk.ac.ox.it.ords.api.database.structure.dto.TableRenameRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 
-public class DatabaseTests extends AbstractResourceTest {
+public class DatabaseTest extends AbstractResourceTest {
 	
 	enum constraint_type{UNIQUE, PRIMARY, FOREIGN}
 	
