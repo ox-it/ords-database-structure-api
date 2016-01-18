@@ -262,7 +262,7 @@ public class StructureServiceImpl {
 				return result.getInt("count");
 			}
 		} finally {
-			result.close();
+			if ( result != null ) result.close();
 		}
 		return 0;
 
@@ -945,7 +945,7 @@ public class StructureServiceImpl {
 		} catch (SQLException e) {
 			log.error("Error with this command", e);
 			log.error("Query:" + query);
-			return null;
+			throw e;
 		} finally {
 			if (preparedStatement != null) {
 				preparedStatement.close();
