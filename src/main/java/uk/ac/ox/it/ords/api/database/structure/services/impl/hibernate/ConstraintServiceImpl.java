@@ -139,16 +139,16 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 		// Generate the SQL for creating the constraint
 		ArrayList<Object> parameters = new ArrayList<Object>();
 		if (isUnique != null && isUnique) {
-			query = "ALTER TABLE ? ADD CONSTRAINT ? UNIQUE (?)";
-			parameters.add(tableName);
-			parameters.add(uniqueConstraintName);
-			parameters.add(columns);
+			query = String.format("ALTER TABLE %s ADD CONSTRAINT %s UNIQUE (%s)",
+                    quote_ident(tableName),
+                    quote_ident(uniqueConstraintName),
+                    columns);  
 		} 
 		else if (isPrimary != null && isPrimary) {
-			query = "ALTER TABLE ? ADD CONSTRAINT ? PRIMARY KEY (?)";
-			parameters.add(tableName);
-			parameters.add(uniqueConstraintName);
-			parameters.add(columns);
+			query = String.format("ALTER TABLE %s ADD CONSTRAINT %s PRIMARY KEY (%s)",
+                    quote_ident(tableName),
+                    quote_ident(uniqueConstraintName),
+                    columns); 
 		} 
 		else if (isForeign != null && isForeign) {
 			String column = newConstraint.getColumn();
@@ -171,12 +171,13 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 						"A reference column must be specified");
 			}
 
-			query = "ALTER TABLE ? ADD CONSTRAINT ? FOREIGN KEY (?) REFERENCES ? (?)";
-			parameters.add(tableName);
-			parameters.add(uniqueConstraintName);
-			parameters.add(column);
-			parameters.add(refTable);
-			parameters.add(refColumn);
+			query = String.format("ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) "
+                    + "REFERENCES %s (%s)",
+                        quote_ident(tableName),
+                        quote_ident(uniqueConstraintName),
+                        quote_ident(column),
+                        quote_ident(refTable),
+                        quote_ident(refColumn));
 		} 
 		else {
 			// If this isn't a Unique, Foreign or Primary key constraint
@@ -190,10 +191,10 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 						"Check constraints are not supported");
 			}
 
-			query = "ALTER TABLE ? ADD CONSTRAINT ? CHECK (?) ";
-			parameters.add(tableName);
-			parameters.add(uniqueConstraintName);
-			parameters.add(checkExpression);
+			query = String.format("ALTER TABLE %s ADD CONSTRAINT %s CHECK (%s) ",
+                    quote_ident(tableName),
+                    quote_ident(uniqueConstraintName),
+                    checkExpression);
 		}
 
 		// Check that a constraint with this name doesn't already exist.
@@ -210,7 +211,7 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 		}
 
 		// Create the constraint
-		this.runJDBCQuery(query, parameters, server, databaseName);
+		this.runJDBCQuery(query, null, server, databaseName);
 	}
 
 	

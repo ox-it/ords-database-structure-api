@@ -80,9 +80,13 @@ public class IndexServiceImpl extends StructureServiceImpl
             unique = "UNIQUE ";
         }
 
-        String query = "CREATE ? INDEX ? ON ? (?)";
-        List<Object> parameters = this.createParameterList(unique, indexName, tableName, columns);
-        this.runJDBCQuery(query, parameters, server, databaseName);
+        String query = String.format("CREATE %sINDEX %s ON %s (%s)",
+                unique,
+                quote_ident(indexName),
+                quote_ident(tableName),
+                columns);
+        //List<Object> parameters = this.createParameterList(unique, indexName, tableName, columns);
+        this.runJDBCQuery(query, null, server, databaseName);
 	}
 	
 
@@ -98,9 +102,10 @@ public class IndexServiceImpl extends StructureServiceImpl
 		}
 		String server = database.getDatabaseServer();
        
-        String query = "ALTER INDEX ? RENAME TO ?";
-        List<Object> parameters = createParameterList ( indexName, newName);
-        this.runJDBCQuery(query, parameters, server, databaseName);
+		String query = String.format("ALTER INDEX %s RENAME TO %s",
+                quote_ident(indexName),
+                quote_ident(newName));
+        this.runJDBCQuery(query, null, server, databaseName);
 
 
 	}
@@ -114,7 +119,9 @@ public class IndexServiceImpl extends StructureServiceImpl
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		this.runJDBCQuery("DROP index ?", createParameterList(indexName), server, databaseName);
+		String statement = String.format("DROP INDEX %s", quote_ident(indexName));
+		
+		this.runJDBCQuery(statement, null, server, databaseName);
 	}
 
 }

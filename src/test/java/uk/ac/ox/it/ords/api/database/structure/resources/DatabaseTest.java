@@ -164,10 +164,18 @@ public class DatabaseTest extends AbstractResourceTest {
 		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
-		// build another column
+		// build another column as auto inc
 		ColumnRequest column2 = this.buildColumnRequest("id", "int", null, false, true);
 		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/id/false").post(column2);
 		assertEquals(201, response.getStatus());
+		
+		// create it as primary key
+		ArrayList<String> columnNames = new ArrayList<String>();
+		columnNames.add("id");
+		ConstraintRequest pkey_contstraint = this.buildConstraintRequest("pkey_testTable", constraint_type.PRIMARY, columnNames, "", "");
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/constraint/pkey_testTable/false").post(pkey_contstraint);
+		assertEquals(201, response.getStatus());
+		
 		
 		// try making a foreign key
 		// build another table

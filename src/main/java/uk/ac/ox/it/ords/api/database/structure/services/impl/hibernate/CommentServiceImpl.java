@@ -58,9 +58,9 @@ public class CommentServiceImpl extends StructureServiceImpl
 		if (!this.checkTableExists(tableName, databaseName, server, userName, password)) {
 			throw new NotFoundException();
 		}
-		String statement = "COMMENT ON TABLE ? IS ?";
-		List<Object> parameters = this.createParameterList(tableName, comment);
-		this.runJDBCQuery(statement, parameters, server, databaseName);
+		String statement = "COMMENT ON TABLE %s IS %s";
+		statement = String.format(statement, quote_ident(tableName), quote_literal(comment));
+		this.runJDBCQuery(statement, null, server, databaseName);
 	}
 
 	@Override
@@ -94,8 +94,11 @@ public class CommentServiceImpl extends StructureServiceImpl
 		if ( !this.checkColumnExists(columnName, tableName, databaseName, server, userName, password)){
 			throw new NotFoundException();
 		}
-		this.runJDBCQuery("COMMENT ON COLUMN ? IS ?",
-				createParameterList(tableName+"."+columnName, comment),
+		String statement = "COMMENT ON COLUMN %s IS %s";
+		String identifier = quote_ident(tableName)+"."+quote_ident(columnName);
+		statement = String.format(statement, identifier, quote_literal(comment));
+		this.runJDBCQuery(statement,
+				null,
 				server,
 				databaseName);
 	

@@ -34,7 +34,6 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.shiro.SecurityUtils;
-import org.hibernate.HibernateException;
 import org.hibernate.SQLQuery;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -159,10 +158,28 @@ public class StructureServiceImpl {
 		return MetaConfiguration.getConfiguration().getString(
 				StructureServiceImpl.ODBC_MASTER_PASSWORD_PROPERTY);
 	}
+	
+	
+	public String getORDSDatabaseUser() throws ConfigurationException {
+		return MetaConfiguration.getConfiguration().getString(
+				StructureServiceImpl.ORDS_DATABASE_USER);
+	}
+	
+	
+	public String getORDSDatabasePassword()  throws ConfigurationException {
+		return MetaConfiguration.getConfiguration().getString(
+				StructureServiceImpl.ORDS_DATABASE_PASSWORD);
+	}
 
 	public String getORDSDatabaseName() throws ConfigurationException {
 		return MetaConfiguration.getConfiguration().getString(
 				StructureServiceImpl.ORDS_DATABASE_NAME);
+	}
+	
+	
+	public String getORDSDatabaseHost()  throws ConfigurationException {
+		return MetaConfiguration.getConfiguration().getString(
+				StructureServiceImpl.ORDS_DATABASE_HOST);
 	}
 
 	public String getDatabaseServer( int dbId, String instance ) throws Exception {
@@ -247,13 +264,6 @@ public class StructureServiceImpl {
 
 	private int runCountSql(String sql, List<Object> parameters, String dbName, String databaseServer,
 			String username, String password) throws Exception {
-		if (dbName == null) {
-			dbName = this.getORDSDatabaseName();
-			if (dbName == null) {
-				dbName = "ords2";
-			}
-		}
-
 		CachedRowSet result = this
 				.runJDBCQuery(sql, parameters, databaseServer, dbName);
 		try {
@@ -479,11 +489,12 @@ public class StructureServiceImpl {
 		// oid for that object. To find the oid for a table from its name, we
 		// need to to cast the table ident to regclass then to oid. 'pg_class'
 		// is the catalog the table belongs to.
-		String query = "SELECT obj_description(quote_ident(?)::regclass::oid, 'pg_class') as comment";
-		ArrayList<Object> parameters = new ArrayList<Object>();
-		parameters.add(tableName);
+		String identifier = String.format( "\'public.%s\'", quote_ident(tableName));
+		String query = String.format("SELECT obj_description(%s::regclass::oid, 'pg_class') as comment",
+				identifier);
+
 		String comment = "";
-		CachedRowSet result = this.runJDBCQuery(query, parameters, databaseServer,
+		CachedRowSet result = this.runJDBCQuery(query, null, databaseServer,
 				databaseName);
 		if (result == null) {
 			return comment;
@@ -866,6 +877,10 @@ public class StructureServiceImpl {
 			connectionProperties.put("user", config.getString(StructureServiceImpl.ORDS_DATABASE_USER));
 			connectionProperties.put("password", config.getString(StructureServiceImpl.ORDS_DATABASE_PASSWORD));
 			server = config.getString(StructureServiceImpl.ORDS_DATABASE_HOST);
+			databaseName = this.getORDSDatabaseName();
+			if ( server == null ) {
+				server = "localhost";
+			}
 		}
 		String connectionURL = "jdbc:postgresql://" + server + "/"
 				+ databaseName;
@@ -892,7 +907,7 @@ public class StructureServiceImpl {
 		Connection connection = null;
 		Properties connectionProperties = new Properties();
 		PreparedStatement preparedStatement = null;
-		if ( server != null ){
+		if ( server != null && databaseName != null ){
 			
 			String userName = this.getODBCUserName();
 			String password = this.getODBCPassword();
@@ -901,10 +916,15 @@ public class StructureServiceImpl {
 		}
 		else {
 			// get the ords database configuration
-			Configuration config = MetaConfiguration.getConfiguration();
-			connectionProperties.put("user", config.getString(StructureServiceImpl.ORDS_DATABASE_USER));
-			connectionProperties.put("password", config.getString(StructureServiceImpl.ORDS_DATABASE_PASSWORD));
-			server = config.getString(StructureServiceImpl.ORDS_DATABASE_HOST);
+			//Configuration config = MetaConfiguration.getConfiguration();
+			connectionProperties.put("user", this.getORDSDatabaseUser());
+			connectionProperties.put("password", this.getORDSDatabasePassword());
+			if ( server == null ) {
+				server = this.getORDSDatabaseHost();
+			}
+			if (databaseName == null ) {
+				databaseName = this.getORDSDatabaseName();
+			}
 		}
 		String connectionURL = "jdbc:postgresql://" + server + "/"
 				+ databaseName;

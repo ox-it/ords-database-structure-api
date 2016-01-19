@@ -201,7 +201,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 			// get the schema designer table for this table
 			SchemaDesignerTable sdt = this.getSchemaDesignerTable(
 					database.getPhysicalDatabaseId(), tableName.toString());
-			String comment = this.tableComment(databaseName, server, databaseName);
+			String comment = this.tableComment(databaseName, server, tableName);
 			tables.addTable(tableName, comment);
 			addTableMetadata(databaseName, server, tableName, tables);
 			if (sdt == null) {
@@ -237,9 +237,9 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		//String createSequence = String.format("CREATE SEQUENCE %s",
 		//quote_ident(sequenceName));
 		//this.runSQLStatement(createSequence, stagingName, userName, password);
-		String createSequence = "CREATE SEQUENCE ords_constraint_seq";
-		String server = database.getDatabaseServer();
-		this.runJDBCQuery(createSequence, null, server, stagingName);
+		//String createSequence = "CREATE SEQUENCE ords_constraint_seq";
+		//String server = database.getDatabaseServer();
+		//this.runJDBCQuery(createSequence, null, server, stagingName);
 		
 		
 		return stagingName;
