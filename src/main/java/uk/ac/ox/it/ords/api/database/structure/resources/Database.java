@@ -44,6 +44,7 @@ import uk.ac.ox.it.ords.api.database.structure.dto.IndexRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.Language;
 import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.TableRenameRequest;
+import uk.ac.ox.it.ords.api.database.structure.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
 import uk.ac.ox.it.ords.api.database.structure.resources.AbstractResource.BooleanCheck;
@@ -128,6 +129,29 @@ public class Database extends AbstractResource{
 		catch ( Exception e ) {
 			return this.handleException(e);
 		}
+	}
+	
+	@PUT
+	@Path("{id}/{instance}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response mergeDatabaseToMain ( 
+			@PathParam("id") int id,
+			@PathParam("instance") String instance ) {
+		if ( !SecurityUtils.getSubject().isPermitted(
+				DatabaseStructurePermissions.DATABASE_MODIFY(id))) {
+			return forbidden();
+		}
+		try {
+			if ( instance.equalsIgnoreCase("MAIN")) {
+				throw new BadParameterException("Cannot replace MAIN with itself!");
+			}
+			OrdsPhysicalDatabase merged = databaseServiceInstance().mergeInstanceToMain(id, instance);
+			return Response.ok().entity(merged).build();
+		}
+		catch(Exception e ) {
+			return this.handleException(e);
+		}
+		
 	}
 	
 	

@@ -58,12 +58,15 @@ public class DatabaseTest extends AbstractResourceTest {
 		
 		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
 		assertNotNull(db);
+		String dbId = Integer.toString(db.getPhysicalDatabaseId());
+		AbstractResourceTest.databaseIds.put(dbId, db.getEntityType().toString());
 		
 		// Strip the id from the end of the path
 		int dbID = db.getPhysicalDatabaseId();
 		
 		response = getClient().path("/"+dbID+"/MAIN").delete();
 		assertEquals(200, response.getStatus());
+		AbstractResourceTest.databaseIds.remove(dbId);
 		
 		logout();
 	}
@@ -78,6 +81,7 @@ public class DatabaseTest extends AbstractResourceTest {
 		
 		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
 		assertNotNull(db);
+		
 		
 		// Strip the id from the end of the path
 		int dbID = db.getPhysicalDatabaseId();
@@ -249,6 +253,7 @@ public class DatabaseTest extends AbstractResourceTest {
 		logout();
 	}
 	
+
 	
 	
 	

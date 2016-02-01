@@ -42,15 +42,15 @@
 		  <param-value>
 		    uk.ac.ox.it.ords.api.database.structure.resources.Database
 		  </param-value>
-		   		</init-param>
-		   	         <init-param>	
-		    <param-name>jaxrs.providers</param-name>
-  <param-value>
-com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider,
-uk.ac.ox.it.ords.api.database.structure.server.UnrecognizedPropertyExceptionMapper,
-uk.ac.ox.it.ords.api.database.structure.server.ValidationExceptionMapper
-  </param-value>
- </init-param>
+		 </init-param>
+		 <init-param>	
+		   <param-name>jaxrs.providers</param-name>
+           <param-value>
+              com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider,
+              uk.ac.ox.it.ords.api.database.structure.server.UnrecognizedPropertyExceptionMapper,
+              uk.ac.ox.it.ords.api.database.structure.server.ValidationExceptionMapper
+           </param-value>
+        </init-param>
 
         <load-on-startup>1</load-on-startup>
     </servlet>

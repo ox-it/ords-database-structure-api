@@ -123,6 +123,30 @@ public class StructureServiceImpl {
 			session.close();
 		}
 	}
+	
+	
+	@SuppressWarnings("unchecked")
+	protected OrdsPhysicalDatabase getDBOnCriteria ( String key, Object value ) throws Exception {
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		try {
+			Transaction transaction = session.beginTransaction();
+			List<OrdsPhysicalDatabase> users = (List<OrdsPhysicalDatabase>) session
+					.createCriteria(OrdsPhysicalDatabase.class)
+					.add(Restrictions.eq(key, value)).list();
+			transaction.commit();
+			if (users.size() == 1) {
+				return users.get(0);
+			}
+			return null;
+		} catch (Exception e) {
+			session.getTransaction().rollback();
+			throw e;
+		} finally {
+			session.close();
+		}
+	}
+	
+	
 
 	public String dbNameFromIDInstance(int dbID, String instance,
 			boolean staging) {
@@ -392,6 +416,8 @@ public class StructureServiceImpl {
 			session.close();
 		}
 	}
+	
+
 
 	@SuppressWarnings("rawtypes")
 	protected List runSQLQuery(String query, String databaseName,

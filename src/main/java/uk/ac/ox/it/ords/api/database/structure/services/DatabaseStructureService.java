@@ -95,8 +95,14 @@ public interface DatabaseStructureService {
 	 */
 	public void deleteDatabase ( int dbId, String instance, boolean Staging ) throws Exception;
 	
-	
-	
+	/**
+	 * Deletes main and replaces it with the instance
+	 * @param dbId
+	 * @param instance
+	 * @return
+	 * @throws Exception
+	 */
+	public OrdsPhysicalDatabase mergeInstanceToMain( int dbId, String instance ) throws Exception;
 	
 	/**
 	 * Factory for obtaining implementations

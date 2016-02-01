@@ -16,8 +16,11 @@
 package uk.ac.ox.it.ords.api.database.structure.resources;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+
+import javax.ws.rs.core.Response;
 
 import org.apache.cxf.endpoint.Server;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
@@ -48,6 +51,8 @@ public class AbstractResourceTest extends AbstractShiroTest {
 
 	protected final static String ENDPOINT_ADDRESS = "local://database-structure-api";
 	protected static Server server;
+	protected static HashMap<String, String> databaseIds;
+
 	protected static void startServer() throws Exception {
 
 	}
@@ -250,6 +255,7 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		//
 		sf.setAddress(ENDPOINT_ADDRESS);
 		server = sf.create(); 
+		databaseIds = new HashMap<String, String>();
 		startServer();
 	}
 
@@ -261,6 +267,11 @@ public class AbstractResourceTest extends AbstractShiroTest {
 
 	@After
 	public void logout(){
+		for ( String dbId: databaseIds.keySet() ) {
+			WebClient client = getClient();
+			String instance = databaseIds.get(dbId);
+			Response r = client.path("/"+dbId+"/MAIN/"+instance+"/delete/false").delete();
+		}
 		SecurityUtils.getSubject().logout();
 	}
 

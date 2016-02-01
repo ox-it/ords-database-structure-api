@@ -124,12 +124,20 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		String username = this.getODBCUserName();
 		String password = this.getODBCPassword();
 		this.createOBDCUserRole(username, password);
-		OrdsPhysicalDatabase db = this.createEmptyDatabase(id, databaseDTO, instance,
-				username, password);
+		OrdsPhysicalDatabase db;
+		if ( instance.equalsIgnoreCase("MAIN")) {
+			db = this.createEmptyDatabase(id, databaseDTO, instance,
+					username, password);
+		}
+		else {
+			db = this.cloneDatabase(id, instance, username);
+		}
 		DatabaseStructureRoleService.Factory.getInstance()
-				.createInitialPermissions(db.getPhysicalDatabaseId());
+					.createInitialPermissions(db.getPhysicalDatabaseId());
 		return db;
 	}
+	
+	
 
 	@Override
 	public OrdsPhysicalDatabase getDatabaseMetaData(int dbId, String instance)
@@ -244,6 +252,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		
 		return stagingName;
 	}
+	
 
 	@Override
 	public void updateStagingDatabase(int dbId, OrdsPhysicalDatabase update)
@@ -271,6 +280,36 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		this.runSQLStatementOnOrdsDB(sql);
 
 	}
+	
+	
+
+	@Override
+	public OrdsPhysicalDatabase mergeInstanceToMain(int dbId, String instance)
+			throws Exception {
+		// check for original database
+		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, "MAIN");
+		String databaseName = database.getDbConsumedName();
+		String instanceDbName = this.calculateInstanceName(database, instance);
+		
+		if ( !this.checkDatabaseExists(databaseName)) {
+			throw new NotFoundException("Original database does not exist");
+		}
+		String sql = "rollback transaction; drop database " + databaseName
+				+ ";";
+		this.runSQLStatementOnOrdsDB(sql);
+		sql = String.format("ALTER DATABASE %s RENAME TO %s", instanceDbName,
+				databaseName);
+		this.runSQLStatementOnOrdsDB(sql);
+		
+		// now we need to find and remove the row from physical database
+		
+		// I think consumed name should be unique
+		OrdsPhysicalDatabase dbRowToDelete = this.getDBOnCriteria("dbConsumedName", instanceDbName);
+		this.removeModelObject(dbRowToDelete);
+
+		return database;
+	}
+
 
 	@Override
 	public void deleteDatabase(int dbId, String instance, boolean staging)
@@ -308,6 +347,51 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 			this.runSQLStatementOnOrdsDB(command);
 		}
 	}
+	
+	
+	private OrdsPhysicalDatabase cloneDatabase (int origDbId, String newInstance, String userName ) throws Exception {
+		OrdsPhysicalDatabase origDb = this.getPhysicalDatabaseFromIDInstance(origDbId, "MAIN");
+		// logicalDatabaseId is common
+		int ldbId = origDb.getLogicalDatabaseId();
+		// consumed name is on original
+		String name = this.calculateInstanceName(origDb, newInstance);
+		// create the new record
+		OrdsPhysicalDatabase newDb = new OrdsPhysicalDatabase();
+		newDb.setLogicalDatabaseId(ldbId);
+		newDb.setDatabaseServer(origDb.getDatabaseServer());
+		newDb.setImportProgress(OrdsPhysicalDatabase.ImportType.FINISHED);
+		newDb.setDbConsumedName(name);
+		EntityType type;
+		if ( newInstance.equalsIgnoreCase("MILESTONE")) {
+			type = EntityType.MILESTONE;
+		}
+		else {
+			type = EntityType.TEST;
+		}
+		newDb.setEntityType(type);
+		newDb.setFileName("none");
+		newDb.setFullPathToDirectory(System.getProperty("java.io.tmpdir")
+				+ "/databases");
+		newDb.setDatabaseType("RAW");
+
+		this.saveModelObject(newDb);
+		
+		if (this.checkDatabaseExists(name)) {
+			String statement = this.getTerminateStatement(name);
+			this.runSQLQuery(statement, null, null, null);
+			statement = "rollback transaction; drop database " + name + ";";
+			this.runSQLStatementOnOrdsDB(statement);
+		}
+		String clonedb = String.format(
+				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s OWNER = %s",
+				quote_ident(name),
+				quote_ident(origDb.getDbConsumedName()),
+				quote_ident(userName));
+		this.runSQLStatementOnOrdsDB(clonedb);
+
+		return newDb;
+	
+	}
 
 	private OrdsPhysicalDatabase createEmptyDatabase(int id, DatabaseRequest databaseDTO, String instance,
 			String userName, String password) throws Exception {
@@ -323,7 +407,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		db.setFileName("none");
 		db.setFullPathToDirectory(System.getProperty("java.io.tmpdir")
 				+ "/databases");
-		db.setDatabaseType(instance);
+		db.setDatabaseType("RAW");
 
 		this.saveModelObject(db);
 
@@ -381,6 +465,10 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 			session.close();
 		}
 
+	}
+	
+	private String calculateInstanceName ( OrdsPhysicalDatabase db, String instance ){
+		return 	(instance + "_" + db.getPhysicalDatabaseId() + "_" + db.getLogicalDatabaseId()).toLowerCase();
 	}
 
 }
