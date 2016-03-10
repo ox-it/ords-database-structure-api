@@ -95,7 +95,7 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		//
 		// Clear out anything there already
 		//
-		session.createSQLQuery("truncate userrole, permissions, project, ordsuser, ordsphysicaldatabase").executeUpdate();
+		session.createSQLQuery("truncate userrole, permissions, ordsuser, ordsphysicaldatabase").executeUpdate();
 		transaction.commit();
 		
 		
