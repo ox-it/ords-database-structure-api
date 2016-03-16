@@ -4,12 +4,10 @@
 
 	<!-- Allow environment variables to override file-based defaults -->
    <system/>
-   <env/>
- 
+   <env />
+   
     <!-- Server-level properties. Properties set here will override package properties -->
-	<properties fileName="/etc/ordsconfig/common.properties" config-optional="true"/>
-  
-  	<!-- This is the default properties file -->
-   <properties fileName="database.properties"/>
+	<properties fileName="/etc/ordsconfig/ords.properties"/>
+
 
 </configuration>

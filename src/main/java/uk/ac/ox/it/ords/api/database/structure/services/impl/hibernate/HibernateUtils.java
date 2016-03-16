@@ -31,6 +31,7 @@ import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.SchemaDesignerTable;
 import uk.ac.ox.it.ords.api.database.structure.model.User;
 import uk.ac.ox.it.ords.api.database.structure.services.ServerConfigurationService;
+import uk.ac.ox.it.ords.security.SimplePersistentSession;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.model.UserRole;
@@ -57,6 +58,7 @@ public class HibernateUtils {
 		configuration.addAnnotatedClass(Permission.class);
 		//configuration.addAnnotatedClass(Audit.class);
 		configuration.addAnnotatedClass(UserRole.class);
+		configuration.addAnnotatedClass(SimplePersistentSession.class);
 	}
 	
 	private static void init() {
