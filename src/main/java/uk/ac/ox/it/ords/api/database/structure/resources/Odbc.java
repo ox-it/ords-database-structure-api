@@ -112,57 +112,6 @@ public class Odbc {
 		return Response.ok(password).build();
 	}
 	
-	@POST
-	@Path("{id}/{instance}/odbc/{role}")
-	@Produces( MediaType.APPLICATION_JSON )
-	public Response addOdbcRole(
-			@PathParam("id") int id,
-			@PathParam("instance") String instance,
-			@PathParam("role") String role
-		) throws Exception{
-		
-		//
-		// Check we have a logged in user
-		//
-		if (SecurityUtils.getSubject() == null || !SecurityUtils.getSubject().isAuthenticated()){
-			return Response.status(401).build();
-		}
-		
-		//
-		// Obtain the database referred to
-		//
-		System.out.println("Looking for DB "+id);
-		OrdsPhysicalDatabase database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id, instance);
-		
-		if (database == null){
-			return Response.status(404).build();
-		}
-		
-		String databaseName = calculateInstanceName(database, instance);
-
-		//
-		// Check permission
-		//
-		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_MODIFY(id))){
-			return Response.status(403).build();			
-		}
-		
-		//
-		// Generate a random password. We return this from the service, but never store it.
-		//
-		String password = new BigInteger(130, random).toString(32);
-		
-		//
-		// Create the role
-		//
-		OdbcService.Factory.getInstance().addOdbcUserToDatabase(role, password, database, databaseName);
-		
-		//
-		// We return the generated password. We could alternatively email it to the user.
-		//
-		return Response.ok(password).build();
-	}
-	
 	@DELETE
 	@Path("{id}/{instance}/odbc/{role}")
 	@Produces( MediaType.APPLICATION_JSON )
