@@ -18,6 +18,8 @@ package uk.ac.ox.it.ords.api.database.structure.dto;
 
 public class OdbcResponse {
 	
+	private String server;
+	private String database;
 	private String password;
 	private String username;
 	
@@ -32,6 +34,18 @@ public class OdbcResponse {
 	}
 	public void setUsername(String username) {
 		this.username = username;
+	}
+	public String getServer() {
+		return server;
+	}
+	public void setServer(String server) {
+		this.server = server;
+	}
+	public String getDatabase() {
+		return database;
+	}
+	public void setDatabase(String database) {
+		this.database = database;
 	}
 
 }

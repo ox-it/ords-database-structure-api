@@ -101,6 +101,8 @@ public class Odbc {
 		// We return the generated password. We could alternatively email it to the user.
 		//
 		OdbcResponse response = new OdbcResponse();
+		response.setServer(database.getDatabaseServer());
+		response.setDatabase(databaseName);
 		response.setPassword(password);
 		response.setUsername(OdbcService.Factory.getInstance().getODBCUserName(databaseName));
 		return Response.ok(response).build();
