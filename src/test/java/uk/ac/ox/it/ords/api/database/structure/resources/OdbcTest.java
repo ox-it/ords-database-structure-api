@@ -38,6 +38,7 @@ import org.junit.Test;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.ColumnRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
+import uk.ac.ox.it.ords.api.database.structure.dto.OdbcResponse;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissionSets;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
@@ -124,8 +125,9 @@ public class OdbcTest extends AbstractDatabaseTest {
 
 		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
-		String password = odbcResponse.readEntity(String.class);
-		String username = "pingapenguinscom_ords_"+calculateInstanceName(db, "MAIN");
+		OdbcResponse output = odbcResponse.readEntity(OdbcResponse.class);
+		String password = output.getPassword();
+		String username = output.getUsername();
 		
 		//
 		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
@@ -215,8 +217,9 @@ public class OdbcTest extends AbstractDatabaseTest {
 
 		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
-		String password = odbcResponse.readEntity(String.class);
-		String username = "pingapenguinscom_ords_"+calculateInstanceName(db, "MAIN");
+		OdbcResponse output = odbcResponse.readEntity(OdbcResponse.class);
+		String password = output.getPassword();
+		String username = output.getUsername();
 		
 		//
 		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
@@ -323,8 +326,9 @@ public class OdbcTest extends AbstractDatabaseTest {
 
 		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
-		String password = odbcResponse.readEntity(String.class);
-		String username = "pingapenguinscom_ords_"+calculateInstanceName(db, "MAIN");
+		OdbcResponse output = odbcResponse.readEntity(OdbcResponse.class);
+		String password = output.getPassword();
+		String username = output.getUsername();
 		
 		//
 		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
@@ -404,8 +408,9 @@ public class OdbcTest extends AbstractDatabaseTest {
 
 		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
-		String password = odbcResponse.readEntity(String.class);
-		String username = "pingapenguinscom_ords_"+calculateInstanceName(db, "MAIN");
+		OdbcResponse output = odbcResponse.readEntity(OdbcResponse.class);
+		String password = output.getPassword();
+		String username = output.getUsername();
 		
 		//
 		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
@@ -494,12 +499,14 @@ public class OdbcTest extends AbstractDatabaseTest {
 
 		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
-		String password = odbcResponse.readEntity(String.class);
-		String username = "pingapenguinscom_ords_"+calculateInstanceName(db, "MAIN");
+		OdbcResponse output = odbcResponse.readEntity(OdbcResponse.class);
+		String password = output.getPassword();
+		String username = output.getUsername();
 		
 		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
-		String newPassword = odbcResponse.readEntity(String.class);
+		output = odbcResponse.readEntity(OdbcResponse.class);
+		String newPassword = output.getPassword();
 		assertFalse(password.equals(newPassword));
 		
 		//

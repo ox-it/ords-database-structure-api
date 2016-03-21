@@ -29,6 +29,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.shiro.SecurityUtils;
 
+import uk.ac.ox.it.ords.api.database.structure.dto.OdbcResponse;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
@@ -99,7 +100,10 @@ public class Odbc {
 		//
 		// We return the generated password. We could alternatively email it to the user.
 		//
-		return Response.ok(password).build();
+		OdbcResponse response = new OdbcResponse();
+		response.setPassword(password);
+		response.setUsername(OdbcService.Factory.getInstance().getODBCUserName(databaseName));
+		return Response.ok(response).build();
 	}
 	
 	@DELETE
