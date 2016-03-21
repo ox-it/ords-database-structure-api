@@ -20,7 +20,6 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 
 import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -84,7 +83,7 @@ public class Odbc {
 		// Check permissions and create the appropriate role
 		//
 		if (SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_VIEW(id))){
-			OdbcService.Factory.getInstance().addReadOnlyOdbcUserToDatabase(OdbcService.Factory.getInstance().getODBCUserName(), password, database, databaseName);
+			OdbcService.Factory.getInstance().addReadOnlyOdbcUserToDatabase(OdbcService.Factory.getInstance().getODBCUserName(databaseName), password, database, databaseName);
 		} else {
 			
 			//
@@ -94,7 +93,7 @@ public class Odbc {
 		}
 		
 		if (SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_MODIFY(id))){
-			OdbcService.Factory.getInstance().addOdbcUserToDatabase(OdbcService.Factory.getInstance().getODBCUserName(), password, database, databaseName);	
+			OdbcService.Factory.getInstance().addOdbcUserToDatabase(OdbcService.Factory.getInstance().getODBCUserName(databaseName), password, database, databaseName);	
 		}
 		
 		//

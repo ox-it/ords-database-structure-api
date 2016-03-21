@@ -61,6 +61,16 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
 		this.revokeFromDatabase(role, database, databaseName);
 	}
 	
+	@Override
+	public String getODBCUserName(String databaseName) throws Exception {
+		
+		// The ODBC user name is the concatenated user name plus database name
+		// This is so that we have one role per user per database, which isn't shared
+		// with other databases; we therefore don't need to worry about storing and updating 
+		// passwords.
+		return this.getODBCUserName() + "_" + databaseName;
+	}
+	
     /**
      * Create a role in ODBC.
      * 

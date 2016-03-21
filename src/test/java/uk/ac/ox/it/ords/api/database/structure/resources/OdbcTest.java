@@ -125,19 +125,20 @@ public class OdbcTest extends AbstractDatabaseTest {
 		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		String password = odbcResponse.readEntity(String.class);
+		String username = "pingapenguinscom_ords_"+calculateInstanceName(db, "MAIN");
 		
 		//
 		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
 		// return anything as its an empty table, but we'll get an Exception if the role isn't permitted.
 		//
-		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 		assertFalse(results.first());
 		
 		//
 		// This should fail as pinga should only have viewer access
 		//
 		try {
-			results = runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+			results = runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 			assertFalse(results.first());
 			fail();
 		} catch (Exception e) {
@@ -149,14 +150,14 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		logout();
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/pingapenguinscom_ords").delete();
+		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/"+username).delete();
 		assertEquals(200, odbcResponse.getStatus());
 		
 		//
 		// This should now fail as pinga is no longer allowed access
 		//
 		try {
-			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 			assertFalse(results.first());
 			fail();
 		} catch (Exception e) {
@@ -215,19 +216,20 @@ public class OdbcTest extends AbstractDatabaseTest {
 		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		String password = odbcResponse.readEntity(String.class);
+		String username = "pingapenguinscom_ords_"+calculateInstanceName(db, "MAIN");
 		
 		//
 		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
 		// return anything as its an empty table, but we'll get an Exception if the role isn't permitted.
 		//
-		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 		assertFalse(results.first());
 		
 		//
 		// This should fail as pinga should only have viewer access
 		//
 		try {
-			results = runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+			results = runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 			assertFalse(results.first());
 			fail();
 		} catch (Exception e) {
@@ -237,20 +239,20 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		// Now drop pinga - this should fail as pinga doesn't have the rights
 		//
-		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/pingapenguinscom_ords").delete();
+		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/"+username).delete();
 		assertEquals(403, odbcResponse.getStatus());
 		
 		logout();
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		
-		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/pingapenguinscom_ords").delete();
+		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/"+username).delete();
 		assertEquals(200, odbcResponse.getStatus());
 		
 		//
 		// This should now fail as pinga is no longer allowed access
 		//
 		try {
-			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 			assertFalse(results.first());
 			fail();
 		} catch (Exception e) {
@@ -322,19 +324,20 @@ public class OdbcTest extends AbstractDatabaseTest {
 		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		String password = odbcResponse.readEntity(String.class);
+		String username = "pingapenguinscom_ords_"+calculateInstanceName(db, "MAIN");
 		
 		//
 		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
 		// return anything as its an empty table, but we'll get an Exception if the role isn't permitted.
 		//
-		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 		assertFalse(results.first());
 		
 		//
 		// However, we should not have access to the second db
 		//
 		try {
-			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db2, "MAIN"), "pingapenguinscom_ords", password);
+			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db2, "MAIN"), username, password);
 			fail();
 		} catch (Exception e) {
 			assertEquals("ERROR: permission denied for relation testTable", e.getMessage());
@@ -402,19 +405,20 @@ public class OdbcTest extends AbstractDatabaseTest {
 		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		String password = odbcResponse.readEntity(String.class);
+		String username = "pingapenguinscom_ords_"+calculateInstanceName(db, "MAIN");
 		
 		//
 		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
 		// return anything as its an empty table, but we'll get an Exception if the role isn't permitted.
 		//
-		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 		assertFalse(results.first());
 		
 		//
 		// This should work as pinga has contributor access
 		//
-		runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
-		results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+		runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), username, password);
+		results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 		assertTrue(results.first());
 		
 		//
@@ -422,14 +426,14 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		logout();
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/pingapenguinscom_ords").delete();
+		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/"+username).delete();
 		assertEquals(200, odbcResponse.getStatus());
 		
 		//
 		// This should now fail as pinga is no longer allowed access
 		//
 		try {
-			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 			assertFalse(results.first());
 			fail();
 		} catch (Exception e) {
@@ -491,6 +495,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		String password = odbcResponse.readEntity(String.class);
+		String username = "pingapenguinscom_ords_"+calculateInstanceName(db, "MAIN");
 		
 		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
@@ -501,25 +506,25 @@ public class OdbcTest extends AbstractDatabaseTest {
 		// This should now fail as we've reset the password
 		//
 		try {
-			CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+			CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 			assertFalse(results.first());
 			fail();
 		} catch (Exception e) {
-			assertEquals("FATAL: password authentication failed for user \"pingapenguinscom_ords\"", e.getMessage());
+			assertEquals("FATAL: password authentication failed for user \""+username+"\"", e.getMessage());
 		}
 		
 		//
 		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
 		// return anything as its an empty table, but we'll get an Exception if the role isn't permitted.
 		//
-		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", newPassword);
+		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, newPassword);
 		assertFalse(results.first());
 		
 		//
 		// This should fail as pinga should only have viewer access
 		//
 		try {
-			results = runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", newPassword);
+			results = runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), username, newPassword);
 			assertFalse(results.first());
 			fail();
 		} catch (Exception e) {
@@ -531,14 +536,14 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		logout();
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/pingapenguinscom_ords").delete();
+		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/"+username).delete();
 		assertEquals(200, odbcResponse.getStatus());
 		
 		//
 		// This should now fail as pinga is no longer allowed access
 		//
 		try {
-			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", newPassword);
+			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, newPassword);
 			assertFalse(results.first());
 			fail();
 		} catch (Exception e) {
