@@ -160,6 +160,11 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		pingu.setRole("localuser");
 		session.save(pingu);
 		
+		UserRole pinga = new UserRole();
+		pinga.setPrincipalName("pinga@penguins.com");
+		pinga.setRole("user");
+		session.save(pinga);
+		
 		UserRole anonymous = new UserRole();
 		anonymous.setPrincipalName("anonymous@nowhere.co");
 		anonymous.setRole("anonymous");
@@ -195,6 +200,15 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		pinguOrds.setStatus(User.AccountStatus.VERIFIED.toString());
 		pinguOrds.setVerificationUuid(UUID.randomUUID().toString());
 		session.save(pinguOrds);
+		
+		User pingaOrds = new User();
+		pingaOrds.setName("pinga");
+		pingaOrds.setPrincipalName("pinga@penguins.com");
+		pingaOrds.setEmail("pinga@penguins.com");
+		pingaOrds.setOdbcUser(pingaOrds.getEmail().replace("@", "").replace(".", ""));
+		pingaOrds.setStatus(User.AccountStatus.VERIFIED.toString());
+		pingaOrds.setVerificationUuid(UUID.randomUUID().toString());
+		session.save(pingaOrds);
 
 		//
 		// Commit our changes
@@ -247,6 +261,7 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		// Add our REST resources to the server
 		//
 		resources.add(new SingletonResourceProvider(new Database(), true));
+		resources.add(new SingletonResourceProvider(new Odbc(), true));
 		
 		sf.setResourceProviders(resources);
 		

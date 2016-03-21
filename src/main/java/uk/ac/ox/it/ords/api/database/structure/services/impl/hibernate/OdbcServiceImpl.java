@@ -19,19 +19,19 @@ package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
 import javax.sql.rowset.CachedRowSet;
+import javax.sql.rowset.RowSetProvider;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
-import org.apache.shiro.SecurityUtils;
 
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
-import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
 import uk.ac.ox.it.ords.api.database.structure.services.OdbcService;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
 
@@ -40,23 +40,19 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
 	private static Logger log = Logger.getLogger(OdbcServiceImpl.class);
 	
     public static final String SCHEMA_NAME = "public";
+
+	@Override
+	public void addReadOnlyOdbcUserToDatabase(String role, String odbcPassword, OrdsPhysicalDatabase database, String databaseName) throws Exception{
+		createNewRole(role, odbcPassword, database, databaseName);
+		provideReadAccessToDB(role, odbcPassword, database, databaseName);
+		//TODO audit
+	}
 	
 	@Override
 	public void addOdbcUserToDatabase(String role, String odbcPassword, OrdsPhysicalDatabase database, String databaseName) throws Exception{
 		
 		createNewRole(role, odbcPassword, database, databaseName);
-		if (SecurityUtils.getSubject().isPermitted(
-				DatabaseStructurePermissions.DATABASE_MODIFY(database.getPhysicalDatabaseId())
-			)){
-			this.provideWriteAccessToDB(role, odbcPassword, database, databaseName);
-			//TODO audit
-		}
-		if (SecurityUtils.getSubject().isPermitted(
-				DatabaseStructurePermissions.DATABASE_VIEW(database.getPhysicalDatabaseId())
-			)){
-			this.provideReadAccessToDB(role, odbcPassword, database, databaseName);
-			//TODO audit
-		}
+		provideWriteAccessToDB(role, odbcPassword, database, databaseName);
 	}
 
 	@Override
@@ -250,8 +246,75 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
     }
     
     //
-    // Utility Methods
+    // Utility Methods. 
+    // @Refactor these are just the same as in StructureServiceImpl, but we run them as ORDS and not as
+    // the current principal; the reason being that these require a higher level of access. We may want to parameterize the
+    // methods in StructureServiceImpl to support this and reduce code duplication.
     //
+    
+	protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,
+			String server, String databaseName) throws Exception {
+		Connection connection = null;
+		Properties connectionProperties = new Properties();
+		PreparedStatement preparedStatement = null;
+		connectionProperties.put("user", this.getORDSDatabaseUser());
+		connectionProperties.put("password", this.getORDSDatabasePassword());
+		if ( server == null ) {
+				server = this.getORDSDatabaseHost();
+		}
+		if (databaseName == null ) {
+				databaseName = this.getORDSDatabaseName();
+		}
+		String connectionURL = "jdbc:postgresql://" + server + "/"
+				+ databaseName;
+		try {
+			connection = DriverManager.getConnection(connectionURL,
+					connectionProperties);
+			preparedStatement = connection.prepareStatement(query);
+			if (parameters != null) {
+				int paramCount = 1;
+				for (Object parameter : parameters) {
+					@SuppressWarnings("rawtypes")
+					Class type = parameter.getClass();
+					if (type.equals(String.class)) {
+						preparedStatement.setString(paramCount,
+								(String) parameter);
+					}
+					if (type.equals(Integer.class)) {
+						preparedStatement.setInt(paramCount,
+								(Integer) parameter);
+					}
+					paramCount++;
+				}
+
+			}
+			if (query.toLowerCase().startsWith("select")) {
+				ResultSet result = preparedStatement.executeQuery();
+				CachedRowSet rowSet = RowSetProvider.newFactory()
+						.createCachedRowSet();
+				rowSet.populate(result);
+				log.debug("prepareAndExecuteStatement:return result");
+				return rowSet;
+			} else {
+				preparedStatement.execute();
+				log.debug("prepareAndExecuteStatement:return null");
+				return null;
+			}
+
+		} catch (SQLException e) {
+			log.error("Error with this command", e);
+			log.error("Query:" + query);
+			throw e;
+		} finally {
+			if (preparedStatement != null) {
+				preparedStatement.close();
+			}
+			if (connection != null) {
+				connection.close();
+			}
+		}
+
+	}
     
 	protected void runSQLStatement(String statement, String server, String databaseName) throws Exception{
 		ArrayList<String> statements = new ArrayList<String>();

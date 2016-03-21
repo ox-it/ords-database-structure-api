@@ -22,6 +22,18 @@ import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.OdbcServiceImpl;
 
 public interface OdbcService {
+	
+	/**
+	 * Create a read-only ODBC connection role
+	 * @param role
+	 * @param odbcPassword
+	 * @param database
+	 * @param databaseName
+	 * @throws Exception
+	 */
+	public abstract void addReadOnlyOdbcUserToDatabase(String role, String odbcPassword,
+			OrdsPhysicalDatabase database, String databaseName)
+			throws Exception;
 
 	public abstract void addOdbcUserToDatabase(String role, String password, OrdsPhysicalDatabase database, String databaseName) throws Exception;
 
@@ -29,6 +41,8 @@ public interface OdbcService {
 
 	public abstract void resetOdbcRolePassword(String roleName, String newPassword, OrdsPhysicalDatabase database, String databaseName) throws Exception;
 
+	public abstract String getODBCUserName() throws Exception;
+	
 	/**
 	 * Factory for obtaining implementations
 	 */
