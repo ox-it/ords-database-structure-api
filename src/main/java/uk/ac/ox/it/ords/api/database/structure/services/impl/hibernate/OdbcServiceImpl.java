@@ -114,7 +114,6 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
         				roleName,
         				userPassword);
         		try {
-        			System.out.println(command);
         			runSQLStatement(command, database.getDatabaseServer(), databaseName);
         		} catch (Exception e) {
         			throw(e);
@@ -132,14 +131,8 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
      */
     private boolean doesRoleExist(String roleName, OrdsPhysicalDatabase database, String databaseName) throws Exception { 
         String query = String.format("SELECT 1 FROM pg_roles WHERE rolname='%s'", roleName);
-        System.out.println(database.getDatabaseServer());
-        System.out.println(databaseName);
-        System.out.println(query);
         CachedRowSet result = runJDBCQuery(query, null, database.getDatabaseServer(), databaseName);
-        System.out.println(result);
-        boolean ret = result.first();
-        System.out.println(ret);
-        return ret;
+        return result.first();
     }
     
 	private boolean provideWriteAccessToDB(String odbcName, String odbcPassword, OrdsPhysicalDatabase database, String databaseName) throws Exception {
@@ -207,7 +200,7 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
         return commandList;
     }
     
-    public static String getSpecialAccessStatements(String roleName, boolean write) {
+    private static String getSpecialAccessStatements(String roleName, boolean write) {
     	if (write) {
     		return String.format("ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT ALL ON TABLES TO \"%s\";", SCHEMA_NAME, roleName);
     	}
