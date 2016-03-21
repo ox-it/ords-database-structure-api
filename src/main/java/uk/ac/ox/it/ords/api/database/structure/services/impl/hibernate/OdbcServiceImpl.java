@@ -50,35 +50,16 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
 	
 	@Override
 	public void addOdbcUserToDatabase(String role, String odbcPassword, OrdsPhysicalDatabase database, String databaseName) throws Exception{
-		
 		createNewRole(role, odbcPassword, database, databaseName);
 		provideWriteAccessToDB(role, odbcPassword, database, databaseName);
+		//TODO audit
 	}
 
 	@Override
 	public void removeOdbcUserFromDatabase(String role, OrdsPhysicalDatabase database, String databaseName) throws Exception {
 		// TODO audit
 		this.revokeFromDatabase(role, database, databaseName);
-
 	}
-	
-	@Override
-    public void resetOdbcRolePassword(String roleName, String newPassword, OrdsPhysicalDatabase database, String databaseName) throws Exception {
-                
-        if ( (roleName == null) || (roleName.isEmpty()) ) {
-        	throw new Exception("No role provided");
-        }
-        else if ( (newPassword == null) || (newPassword.isEmpty()) ) {
-        	throw new Exception("No password provided");
-        }
-        else {
-			String command = String.format("alter user \"%s\" password '%s'",
-					roleName,
-			        newPassword);
-			this.runSQLStatement(command, database.getDatabaseServer(), databaseName);
-        }
-        // TODO Audit
-    }
 	
     /**
      * Create a role in ODBC.
@@ -97,7 +78,18 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
         }
         else {
         	if (doesRoleExist(roleName, database, databaseName)) {
-        		log.info("Role already exists - no need to create this");
+        		log.info("Role already exists; updating");
+        		//
+        		// But lets update the password...
+        		//
+        		String command = String.format("alter role \"%s\" nosuperuser login createdb inherit nocreaterole password '%s' valid until '2045-01-01'",
+        				roleName,
+        				userPassword);
+        		try {
+        			runSQLStatement(command, database.getDatabaseServer(), databaseName);
+        		} catch (Exception e) {
+        			throw(e);
+        		}
         	} else {
         		/*
         		 * In creating the command to create a user, some of the defaults are specified explicitly

@@ -39,8 +39,6 @@ public interface OdbcService {
 
 	public abstract void removeOdbcUserFromDatabase(String role, OrdsPhysicalDatabase database, String databaseName)  throws Exception;
 
-	public abstract void resetOdbcRolePassword(String roleName, String newPassword, OrdsPhysicalDatabase database, String databaseName) throws Exception;
-
 	public abstract String getODBCUserName() throws Exception;
 	
 	/**
