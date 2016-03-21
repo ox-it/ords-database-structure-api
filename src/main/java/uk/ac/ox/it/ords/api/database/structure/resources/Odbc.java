@@ -42,21 +42,6 @@ public class Odbc {
 	// We use this to generate random passcodes
 	//
 	private SecureRandom random = new SecureRandom();
-
-	
-	//
-	// TODO Get the list of ODBC roles for this database
-	// 
-	@GET
-	@Path("{id}/{instance}/odbc/")
-	@Produces( MediaType.APPLICATION_JSON )
-	public Response getOdbcRoles(
-			@PathParam("id") int id,
-			@PathParam("instance") String instance
-			){
-		
-		return Response.ok().build();
-	}
 	
 	@POST
 	@Path("{id}/{instance}/odbc/")
@@ -76,7 +61,13 @@ public class Odbc {
 		//
 		// Obtain the database referred to
 		//
-		OrdsPhysicalDatabase database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id, instance);
+		OrdsPhysicalDatabase database = null;
+		
+		try {
+			database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id, instance);
+		} catch (Exception e) {
+			return Response.status(404).build();
+		}
 		
 		if (database == null){
 			return Response.status(404).build();
@@ -132,7 +123,13 @@ public class Odbc {
 		//
 		// Obtain the database referred to
 		//
-		OrdsPhysicalDatabase database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id, instance);
+		OrdsPhysicalDatabase database = null;
+		
+		try {
+			database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id, instance);
+		} catch (Exception e) {
+			return Response.status(404).build();
+		}
 		
 		if (database == null){
 			return Response.status(404).build();

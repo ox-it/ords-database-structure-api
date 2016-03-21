@@ -251,35 +251,12 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
 		PreparedStatement preparedStatement = null;
 		connectionProperties.put("user", this.getORDSDatabaseUser());
 		connectionProperties.put("password", this.getORDSDatabasePassword());
-		if ( server == null ) {
-				server = this.getORDSDatabaseHost();
-		}
-		if (databaseName == null ) {
-				databaseName = this.getORDSDatabaseName();
-		}
 		String connectionURL = "jdbc:postgresql://" + server + "/"
 				+ databaseName;
 		try {
 			connection = DriverManager.getConnection(connectionURL,
 					connectionProperties);
 			preparedStatement = connection.prepareStatement(query);
-			if (parameters != null) {
-				int paramCount = 1;
-				for (Object parameter : parameters) {
-					@SuppressWarnings("rawtypes")
-					Class type = parameter.getClass();
-					if (type.equals(String.class)) {
-						preparedStatement.setString(paramCount,
-								(String) parameter);
-					}
-					if (type.equals(Integer.class)) {
-						preparedStatement.setInt(paramCount,
-								(Integer) parameter);
-					}
-					paramCount++;
-				}
-
-			}
 			if (query.toLowerCase().startsWith("select")) {
 				ResultSet result = preparedStatement.executeQuery();
 				CachedRowSet rowSet = RowSetProvider.newFactory()
