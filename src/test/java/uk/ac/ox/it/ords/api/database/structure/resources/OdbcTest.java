@@ -19,6 +19,7 @@ package uk.ac.ox.it.ords.api.database.structure.resources;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
@@ -43,6 +44,13 @@ import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.Hibernate
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.model.UserRole;
 
+/**
+ * Tests for ODBC services
+ * Make sure you've set up PostgreSQL to require passwords in pg_hba.conf, e.g.:
+ * host    all             all             127.0.0.1/32            md5
+ * @author scottbw
+ *
+ */
 public class OdbcTest extends AbstractDatabaseTest {
 
 	@Test
@@ -88,7 +96,6 @@ public class OdbcTest extends AbstractDatabaseTest {
 		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		String password = odbcResponse.readEntity(String.class);
-		System.out.println(password);
 		
 		//
 		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
@@ -121,6 +128,197 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		try {
 			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+			assertFalse(results.first());
+			fail();
+		} catch (Exception e) {
+			assertEquals("ERROR: permission denied for relation testTable", e.getMessage());
+		}
+		
+		//
+		// Now drop the DB
+		//
+		Response deleteResponse = getClient().path("/"+dbID+"/MAIN").delete();
+		assertEquals(200, deleteResponse.getStatus());
+	}
+	
+	@Test
+	public void createOdbcContributorRole() throws Exception{
+		
+		//
+		// First create a database
+		//
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, 98, "localhost");
+		Response response = getClient().path("/0/MAIN").post(dbr);
+		assertEquals(201, response.getStatus());
+		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(db);
+		
+		//
+		// Add a table
+		//
+		int dbID = db.getPhysicalDatabaseId();
+		
+		// Create a table
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
+		assertEquals(201, response.getStatus());
+		
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
+		// Create a column
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		logout();
+		
+		//
+		// Add Pinga as a user for this database
+		//
+		this.addContributor("pinga@penguins.com", dbID);
+		
+		//
+		// Now lets add an ODBC role - this time Pinga is logging in and asking for access
+		//
+		loginUsingSSO("pinga@penguins.com","");
+
+		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
+		assertEquals(200, odbcResponse.getStatus());
+		String password = odbcResponse.readEntity(String.class);
+		
+		//
+		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
+		// return anything as its an empty table, but we'll get an Exception if the role isn't permitted.
+		//
+		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+		assertFalse(results.first());
+		
+		//
+		// This should work as pinga has contributor access
+		//
+		runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+		results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+		assertTrue(results.first());
+		
+		//
+		// Now drop pinga
+		//
+		logout();
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/pingapenguinscom_ords").delete();
+		assertEquals(200, odbcResponse.getStatus());
+		
+		//
+		// This should now fail as pinga is no longer allowed access
+		//
+		try {
+			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+			assertFalse(results.first());
+			fail();
+		} catch (Exception e) {
+			assertEquals("ERROR: permission denied for relation testTable", e.getMessage());
+		}
+		
+		//
+		// Now drop the DB
+		//
+		Response deleteResponse = getClient().path("/"+dbID+"/MAIN").delete();
+		assertEquals(200, deleteResponse.getStatus());
+	}
+	/**
+	 * Test that we can reset a user's ODBC password by POSTing
+	 * @throws Exception
+	 */
+	@Test
+	public void resetRole() throws Exception{
+		
+		//
+		// First create a database
+		//
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, 97, "localhost");
+		Response response = getClient().path("/0/MAIN").post(dbr);
+		assertEquals(201, response.getStatus());
+		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(db);
+		
+		//
+		// Add a table
+		//
+		int dbID = db.getPhysicalDatabaseId();
+		
+		// Create a table
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
+		assertEquals(201, response.getStatus());
+		
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
+		// Create a column
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		logout();
+		
+		//
+		// Add Pinga as a user for this database
+		//
+		this.addViewer("pinga@penguins.com", dbID);
+		
+		//
+		// Now lets add an ODBC role - this time Pinga is logging in and asking for access
+		//
+		loginUsingSSO("pinga@penguins.com","");
+
+		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
+		assertEquals(200, odbcResponse.getStatus());
+		String password = odbcResponse.readEntity(String.class);
+		
+		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
+		assertEquals(200, odbcResponse.getStatus());
+		String newPassword = odbcResponse.readEntity(String.class);
+		assertFalse(password.equals(newPassword));
+		
+		//
+		// This should now fail as we've reset the password
+		//
+		try {
+			CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", password);
+			assertFalse(results.first());
+			fail();
+		} catch (Exception e) {
+			assertEquals("FATAL: password authentication failed for user \"pingapenguinscom_ords\"", e.getMessage());
+		}
+		
+		//
+		// So, do we now have rights for pinga? Easiest way is to see if we can connect and run a query. It won't
+		// return anything as its an empty table, but we'll get an Exception if the role isn't permitted.
+		//
+		CachedRowSet results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", newPassword);
+		assertFalse(results.first());
+		
+		//
+		// This should fail as pinga should only have viewer access
+		//
+		try {
+			results = runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", newPassword);
+			assertFalse(results.first());
+			fail();
+		} catch (Exception e) {
+			assertEquals("ERROR: permission denied for relation testTable", e.getMessage());
+		}
+		
+		//
+		// Now drop pinga
+		//
+		logout();
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/pingapenguinscom_ords").delete();
+		assertEquals(200, odbcResponse.getStatus());
+		
+		//
+		// This should now fail as pinga is no longer allowed access
+		//
+		try {
+			results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), "pingapenguinscom_ords", newPassword);
 			assertFalse(results.first());
 			fail();
 		} catch (Exception e) {
@@ -179,7 +377,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
 		Transaction transaction = session.beginTransaction();
 
-		for (String permission : DatabaseStructurePermissionSets.getPermissionsForViewer(99)){
+		for (String permission : DatabaseStructurePermissionSets.getPermissionsForViewer(databaseid)){
 			Permission permissionObject = new Permission();
 			permissionObject.setRole("viewer_"+databaseid);
 			permissionObject.setPermission(permission);
@@ -189,6 +387,26 @@ public class OdbcTest extends AbstractDatabaseTest {
 		UserRole pinga = new UserRole();
 		pinga.setPrincipalName(principal);
 		pinga.setRole("viewer_"+databaseid);
+		session.save(pinga);
+		
+		transaction.commit();
+	}
+	
+	private void addContributor(String principal, int databaseid){
+
+		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
+		Transaction transaction = session.beginTransaction();
+
+		for (String permission : DatabaseStructurePermissionSets.getPermissionsForContributor(databaseid)){
+			Permission permissionObject = new Permission();
+			permissionObject.setRole("contributor_"+databaseid);
+			permissionObject.setPermission(permission);
+			session.save(permissionObject);
+		}
+		
+		UserRole pinga = new UserRole();
+		pinga.setPrincipalName(principal);
+		pinga.setRole("contributor_"+databaseid);
 		session.save(pinga);
 		
 		transaction.commit();
