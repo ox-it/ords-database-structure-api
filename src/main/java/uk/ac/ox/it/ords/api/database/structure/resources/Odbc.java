@@ -30,6 +30,7 @@ import javax.ws.rs.core.Response;
 import org.apache.shiro.SecurityUtils;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.OdbcResponse;
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
@@ -74,6 +75,17 @@ public class Odbc {
 		}
 		
 		String databaseName = calculateInstanceName(database, instance);
+		
+		//
+		// Check ODBC is enabled for this database for this user
+		//
+		OrdsDB ordsDB = DatabaseStructureService.Factory.getInstance().getLogicalDatabase(database.getLogicalDatabaseId());
+		if (ordsDB == null){
+			return Response.status(500).build();
+		}
+		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_REQUEST_ODBC_ACCESS(ordsDB.getLogicalDatabaseId()))){
+			return Response.status(403).build();
+		}
 
 		//
 		// Generate a random password. We return this from the service, but never store it.
@@ -83,8 +95,20 @@ public class Odbc {
 		//
 		// Check permissions and create the appropriate role
 		//
-		if (SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_VIEW(id))){
+		if (SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_MODIFY(database.getLogicalDatabaseId()))){
+			
+			//
+			// User has Modify rights, so create a read-write ODBC role
+			//
+			OdbcService.Factory.getInstance().addOdbcUserToDatabase(OdbcService.Factory.getInstance().getODBCUserName(databaseName), password, database, databaseName);	
+
+		} else if (SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_VIEW(database.getLogicalDatabaseId()))){
+			
+			//
+			// User has View rights, so create a read-only ODBC role
+			//
 			OdbcService.Factory.getInstance().addReadOnlyOdbcUserToDatabase(OdbcService.Factory.getInstance().getODBCUserName(databaseName), password, database, databaseName);
+
 		} else {
 			
 			//
@@ -93,9 +117,6 @@ public class Odbc {
 			return Response.status(403).build();
 		}
 		
-		if (SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_MODIFY(id))){
-			OdbcService.Factory.getInstance().addOdbcUserToDatabase(OdbcService.Factory.getInstance().getODBCUserName(databaseName), password, database, databaseName);	
-		}
 		
 		//
 		// We return the generated password. We could alternatively email it to the user.
@@ -145,7 +166,7 @@ public class Odbc {
 		//
 		// Check permission
 		//
-		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_MODIFY(id))){
+		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_MODIFY(database.getLogicalDatabaseId()))){
 			return Response.status(403).build();			
 		}
 		

@@ -16,79 +16,19 @@
 
 package uk.ac.ox.it.ords.api.database.structure.services;
 
-import java.util.List;
 import java.util.ServiceLoader;
 
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.DatabaseStructureRoleServiceImpl;
-import uk.ac.ox.it.ords.security.model.UserRole;
 
 public interface DatabaseStructureRoleService {
-
-	/**
-	 * Update a role
-	 * @param userRole
-	 */
-	public void updateDatabseRole(UserRole userRole, int dbId) throws Exception;
-	
-	/**
-	 * Gets the project owner, if any
-	 */
-	public UserRole getDatabaseOwner(int dbId) throws Exception;
 	
 	/**
 	 * Create the Owner role and their permissions; called once when a new project is created
 	 * @param groupId
 	 * @throws Exception
 	 */
-	public void createInitialPermissions(int groupId) throws Exception;
-	
-	/**
-	 * Delete all the permissions and roles associated with a project; called once when a project is deleted
-	 * @param groupId
-	 * @throws Exception
-	 */
-	public void deletePermissions(int dbId) throws Exception;
-	
-	/**
-	 * Return all the UserRoles that match the pattern of the project
-	 * @param groupId
-	 * @return a List of UserRole objects
-	 * @throws Exception
-	 */
-	public List<UserRole> getUserRolesForDatabase(int dbId) throws Exception;
-	
-
-	/**
-	 * Return the specified UserRole instance
-	 * @param roleId 
-	 * @return the UserRole specified, or null if there is no match
-	 * @throws Exception
-	 */
-	public UserRole getUserRole(int roleId) throws Exception;
-	
-	/**
-	 * Create the UserRole 
-	 * @param groupId
-	 * @param userRole
-	 * @return the UserRole that has been persisted
-	 * @throws Exception
-	 */
-	public UserRole addUserRoleToDatabase(int dbId, UserRole userRole) throws Exception;
-	
-	/**
-	 * Remove the UserRole
-	 * @param projectid
-	 * @param roleId
-	 * @throws Exception
-	 */
-	public void removeUserFromRoleInDatabase(int dbId, int roleId) throws Exception;	
-
-	/**
-	 * The enumeration of valid UserRole types
-	 */
-    public enum DatabaseRole {
-        owner, databaseadministrator, contributor, viewer, deleted
-    };
+	public void createInitialPermissions(OrdsDB database) throws Exception;
 
 	   public static class Factory {
 			private static DatabaseStructureRoleService provider;
@@ -116,9 +56,4 @@ public interface DatabaseStructureRoleService {
 		    	return provider;
 		    }
 	   }
-
-	String getPrivateUserRole(String role, int projectId);
-
-	String getPublicUserRole(String role);
-
 }

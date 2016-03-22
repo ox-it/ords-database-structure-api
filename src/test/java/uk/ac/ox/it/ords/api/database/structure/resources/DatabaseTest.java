@@ -23,6 +23,11 @@ import java.util.HashMap;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.shiro.SecurityUtils;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.ColumnRequest;
@@ -33,13 +38,66 @@ import uk.ac.ox.it.ords.api.database.structure.dto.IndexRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.TablePosition;
 import uk.ac.ox.it.ords.api.database.structure.dto.TableRenameRequest;
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
+import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
+import uk.ac.ox.it.ords.security.model.Permission;
+import uk.ac.ox.it.ords.security.model.UserRole;
+import uk.ac.ox.it.ords.security.services.PermissionsService;
 
 public class DatabaseTest extends AbstractDatabaseTest {
 	
 	enum constraint_type{UNIQUE, PRIMARY, FOREIGN}
 	
+	static int logicalDatabaseId;
+	
+	@BeforeClass
+	public static void setup(){
+		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
+		Transaction transaction = session.beginTransaction();
+		OrdsDB database = new OrdsDB();
+		database.setDbName("DatabaseTest");
+		database.setDbDescription("DatabaseTest");
+		database.setDatabaseType("testing");
+		session.save(database);
+		transaction.commit();
+		logicalDatabaseId = database.getLogicalDatabaseId();
+	}
+	
+	@AfterClass
+	public static void tearDown(){
+		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
+		Transaction transaction = session.beginTransaction();
+		OrdsDB database = new OrdsDB();
+		database.setLogicalDatabaseId(logicalDatabaseId);
+		session.delete(database);
+		transaction.commit();
+	}
+	
+	@Test
+	public void checkPermission() throws Exception{
+		loginUsingSSO("test","test");
+		
+		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
+		Transaction transaction = session.beginTransaction();
+		UserRole pingu = new UserRole();
+		pingu.setPrincipalName("test");
+		pingu.setRole("databaseowner_9");
+		session.save(pingu);
+		
+		Permission permission = new Permission();
+		permission.setRole("databaseowner_9");
+		permission.setPermission("database:*:9");
+		PermissionsService.Factory.getInstance().createPermission(permission);
+		transaction.commit();
+		
+		System.out.println(SecurityUtils.getSubject().hasRole("databaseowner_9"));
+		assertTrue(SecurityUtils.getSubject().isPermitted("database:view:9"));
+		assertTrue(SecurityUtils.getSubject().isPermitted("database:view:9:43"));
+		assertTrue(SecurityUtils.getSubject().isPermitted("database:view:9:41"));
+
+	}
 	
 	@Test
 	public void getDatabaseList() {
@@ -52,7 +110,7 @@ public class DatabaseTest extends AbstractDatabaseTest {
 	@Test
 	public void createAndDeleteDatabase() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, 12, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
 		Response response = getClient().path("/0/MAIN").post(dbr);
 		assertEquals(201, response.getStatus());
 		
@@ -75,7 +133,7 @@ public class DatabaseTest extends AbstractDatabaseTest {
 	@Test
 	public void stagingTest() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, 1201, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
 		Response response = getClient().path("/0/MAIN").post(dbr);
 		assertEquals(201, response.getStatus());
 		
@@ -104,7 +162,7 @@ public class DatabaseTest extends AbstractDatabaseTest {
 	@Test
 	public void testTables() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, 1305, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
 		Response response = getClient().path("/0/MAIN").post(dbr);
 		assertEquals(201, response.getStatus());
 		
@@ -148,7 +206,7 @@ public class DatabaseTest extends AbstractDatabaseTest {
 	public void testIntegratedBuildTable() {
 
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, 1205, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
 		Response response = getClient().path("/0/MAIN").post(dbr);
 		assertEquals(201, response.getStatus());
 		

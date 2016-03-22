@@ -26,6 +26,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.List;
 import java.util.Properties;
 
 import javax.sql.rowset.CachedRowSet;
@@ -34,16 +35,24 @@ import javax.ws.rs.core.Response;
 
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.hibernate.criterion.Restrictions;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.ColumnRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.OdbcResponse;
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissionSets;
+import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.model.UserRole;
+import uk.ac.ox.it.ords.security.services.PermissionsService;
 
 /**
  * Tests for ODBC services
@@ -53,6 +62,92 @@ import uk.ac.ox.it.ords.security.model.UserRole;
  *
  */
 public class OdbcTest extends AbstractDatabaseTest {
+	
+	private static int projectId = 9999;
+	private int dbID;
+	private static int logicalDatabaseId;
+
+	private OrdsPhysicalDatabase db;
+	
+	@BeforeClass
+	public static void setupContext() throws Exception{
+		//
+		// Create a logical database
+		//
+		OrdsDB ordsDB = new OrdsDB();
+		ordsDB.setDatabaseProjectId(projectId);
+		ordsDB.setDatabaseType("relational");
+		ordsDB.setDbName("test");
+		ordsDB.setDbDescription("test");
+		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
+		Transaction transaction = session.beginTransaction();
+		session.save(ordsDB);
+		transaction.commit();
+		
+		logicalDatabaseId = ordsDB.getLogicalDatabaseId();
+		
+		//
+		// Enable ODBC
+		//
+		Permission permission = new Permission();
+		permission.setPermission(DatabaseStructurePermissions.DATABASE_REQUEST_ODBC_ACCESS(logicalDatabaseId));
+		permission.setRole("owner_"+projectId);
+		PermissionsService.Factory.getInstance().createPermission(permission);
+		permission = new Permission();
+		permission.setPermission(DatabaseStructurePermissions.DATABASE_REQUEST_ODBC_ACCESS(logicalDatabaseId));
+		permission.setRole("viewer_"+projectId);
+		PermissionsService.Factory.getInstance().createPermission(permission);
+		permission = new Permission();		
+		permission.setPermission(DatabaseStructurePermissions.DATABASE_REQUEST_ODBC_ACCESS(logicalDatabaseId));
+		permission.setRole("contributor_"+projectId);
+		PermissionsService.Factory.getInstance().createPermission(permission);
+		
+	}
+	
+	@Before
+	public void setup() throws Exception{
+		
+		//
+		// Create a database
+		//
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		Response response = getClient().path("/0/MAIN").post(dbr);
+		assertEquals(201, response.getStatus());
+		db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(db);
+		
+		//
+		// Add a table
+		//
+		dbID = db.getPhysicalDatabaseId();
+		
+		// Create a table
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
+		assertEquals(201, response.getStatus());
+		
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
+		// Create a column
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		logout();
+	}
+	
+	@After
+	public void tearDown(){
+
+		//
+		// Now drop the DB
+		//
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		Response deleteResponse = getClient().path("/"+dbID+"/MAIN").delete();
+		assertEquals(200, deleteResponse.getStatus());
+		
+		logout();
+	}
 
 	
 	@Test 
@@ -85,38 +180,11 @@ public class OdbcTest extends AbstractDatabaseTest {
 
 	@Test
 	public void createOdbcRole() throws Exception{
-		
-		//
-		// First create a database
-		//
-		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, 99, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
-		assertEquals(201, response.getStatus());
-		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
-		assertNotNull(db);
-		
-		//
-		// Add a table
-		//
-		int dbID = db.getPhysicalDatabaseId();
-		
-		// Create a table
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
-		assertEquals(201, response.getStatus());
-		
-		// build a column
-		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
-		// Create a column
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
-		assertEquals(201, response.getStatus());
-		
-		logout();
-		
+
 		//
 		// Add Pinga as a user for this database
 		//
-		this.addViewer("pinga@penguins.com", dbID);
+		this.addViewer("pinga@penguins.com", logicalDatabaseId);
 		
 		//
 		// Now lets add an ODBC role - this time Pinga is logging in and asking for access
@@ -165,45 +233,11 @@ public class OdbcTest extends AbstractDatabaseTest {
 		} catch (Exception e) {
 			assertEquals("ERROR: permission denied for relation testTable", e.getMessage());
 		}
-		
-		//
-		// Now drop the DB
-		//
-		Response deleteResponse = getClient().path("/"+dbID+"/MAIN").delete();
-		assertEquals(200, deleteResponse.getStatus());
-		
 		logout();
 	}
 	
 	@Test
 	public void revokeOdbcRole() throws Exception{
-		
-		//
-		// First create a database
-		//
-		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, 99, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
-		assertEquals(201, response.getStatus());
-		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
-		assertNotNull(db);
-		
-		//
-		// Add a table
-		//
-		int dbID = db.getPhysicalDatabaseId();
-		
-		// Create a table
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
-		assertEquals(201, response.getStatus());
-		
-		// build a column
-		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
-		// Create a column
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
-		assertEquals(201, response.getStatus());
-		
-		logout();
 		
 		//
 		// Add Pinga as a user for this database
@@ -261,44 +295,34 @@ public class OdbcTest extends AbstractDatabaseTest {
 		} catch (Exception e) {
 			assertEquals("ERROR: permission denied for relation testTable", e.getMessage());
 		}
-		
-		//
-		// Now drop the DB
-		//
-		Response deleteResponse = getClient().path("/"+dbID+"/MAIN").delete();
-		assertEquals(200, deleteResponse.getStatus());
-		
 		logout();
+		
 	}
 	
 	@Test
 	public void createOdbcRoleNotPermitted() throws Exception{
 		
 		//
-		// First create a database
+		// Create a second logical database
 		//
-		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, 92, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
-		assertEquals(201, response.getStatus());
-		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
-		assertNotNull(db);
+		OrdsDB ordsDB = new OrdsDB();
+		ordsDB.setDatabaseProjectId(projectId);
+		ordsDB.setDatabaseType("relational");
+		ordsDB.setDbName("test");
+		ordsDB.setDbDescription("test");
+		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
+		Transaction transaction = session.beginTransaction();
+		session.save(ordsDB);
+		transaction.commit();
 		
-		//
-		// Add a table
-		//
-		int dbID = db.getPhysicalDatabaseId();
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
-		assertEquals(201, response.getStatus());
-		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
-		assertEquals(201, response.getStatus());
+		int logicalDatabaseId2 = ordsDB.getLogicalDatabaseId();
 		
 		//
 		// Create a second database
 		//
-		dbr = this.buildDatabaseRequest(null, 93, "localhost");
-		response = getClient().path("/0/MAIN").post(dbr);
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId2, "localhost");
+		Response response = getClient().path("/0/MAIN").post(dbr);
 		assertEquals(201, response.getStatus());
 		OrdsPhysicalDatabase db2 = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
 		assertNotNull(db2);
@@ -309,15 +333,15 @@ public class OdbcTest extends AbstractDatabaseTest {
 		int dbID2 = db2.getPhysicalDatabaseId();
 		response = getClient().path("/"+dbID2+"/MAIN/table/testTable/false").post(null);
 		assertEquals(201, response.getStatus());
-		column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
+		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
 		response = getClient().path("/"+dbID2+"/MAIN/table/testTable/column/testColumn/false").post(column1);
 		assertEquals(201, response.getStatus());
 		logout();
 		
 		//
-		// Add Pinga as a user for this database
+		// Add Pinga as a user for the first database
 		//
-		this.addViewer("pinga@penguins.com", dbID);
+		this.addViewer("pinga@penguins.com", logicalDatabaseId);
 		
 		//
 		// Now lets add an ODBC role - this time Pinga is logging in and asking for access
@@ -357,12 +381,8 @@ public class OdbcTest extends AbstractDatabaseTest {
 		// Now drop the DBs
 		//
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		Response deleteResponse = getClient().path("/"+dbID+"/MAIN").delete();
+		Response deleteResponse = getClient().path("/"+dbID2+"/MAIN").delete();
 		assertEquals(200, deleteResponse.getStatus());
-		deleteResponse = getClient().path("/"+dbID2+"/MAIN").delete();
-		assertEquals(200, deleteResponse.getStatus());
-
-		
 		logout();
 	}
 	
@@ -370,36 +390,9 @@ public class OdbcTest extends AbstractDatabaseTest {
 	public void createOdbcContributorRole() throws Exception{
 		
 		//
-		// First create a database
-		//
-		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, 98, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
-		assertEquals(201, response.getStatus());
-		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
-		assertNotNull(db);
-		
-		//
-		// Add a table
-		//
-		int dbID = db.getPhysicalDatabaseId();
-		
-		// Create a table
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
-		assertEquals(201, response.getStatus());
-		
-		// build a column
-		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
-		// Create a column
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
-		assertEquals(201, response.getStatus());
-		
-		logout();
-		
-		//
 		// Add Pinga as a user for this database
 		//
-		this.addContributor("pinga@penguins.com", dbID);
+		this.addContributor("pinga@penguins.com", logicalDatabaseId);
 		
 		//
 		// Now lets add an ODBC role - this time Pinga is logging in and asking for access
@@ -425,11 +418,11 @@ public class OdbcTest extends AbstractDatabaseTest {
 		runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 		results = runSQLStatement("SELECT * FROM \"testTable\"", "localhost", calculateInstanceName(db, "MAIN"), username, password);
 		assertTrue(results.first());
+		logout();
 		
 		//
 		// Now drop pinga
 		//
-		logout();
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/"+username).delete();
 		assertEquals(200, odbcResponse.getStatus());
@@ -446,12 +439,13 @@ public class OdbcTest extends AbstractDatabaseTest {
 		}
 		
 		//
-		// Now drop the DB
+		// We also need to drop Pinga's contributor access level or this will mess up other tests
 		//
-		Response deleteResponse = getClient().path("/"+dbID+"/MAIN").delete();
-		assertEquals(200, deleteResponse.getStatus());
+		dropRoles("pinga@penguins.com");
+		
 		
 		logout();
+		
 	}
 	/**
 	 * Test that we can reset a user's ODBC password by POSTing
@@ -461,36 +455,9 @@ public class OdbcTest extends AbstractDatabaseTest {
 	public void resetRole() throws Exception{
 		
 		//
-		// First create a database
-		//
-		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, 97, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
-		assertEquals(201, response.getStatus());
-		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
-		assertNotNull(db);
-		
-		//
-		// Add a table
-		//
-		int dbID = db.getPhysicalDatabaseId();
-		
-		// Create a table
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
-		assertEquals(201, response.getStatus());
-		
-		// build a column
-		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
-		// Create a column
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
-		assertEquals(201, response.getStatus());
-		
-		logout();
-		
-		//
 		// Add Pinga as a user for this database
 		//
-		this.addViewer("pinga@penguins.com", dbID);
+		this.addViewer("pinga@penguins.com", logicalDatabaseId);
 		
 		//
 		// Now lets add an ODBC role - this time Pinga is logging in and asking for access
@@ -531,8 +498,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		// This should fail as pinga should only have viewer access
 		//
 		try {
-			results = runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), username, newPassword);
-			assertFalse(results.first());
+			runSQLStatement("insert into \"testTable\" values ('testColumn' = 'banana')", "localhost", calculateInstanceName(db, "MAIN"), username, newPassword);
 			fail();
 		} catch (Exception e) {
 			assertEquals("ERROR: permission denied for relation testTable", e.getMessage());
@@ -556,12 +522,6 @@ public class OdbcTest extends AbstractDatabaseTest {
 		} catch (Exception e) {
 			assertEquals("ERROR: permission denied for relation testTable", e.getMessage());
 		}
-		
-		//
-		// Now drop the DB
-		//
-		Response deleteResponse = getClient().path("/"+dbID+"/MAIN").delete();
-		assertEquals(200, deleteResponse.getStatus());
 		
 		logout();
 	}
@@ -613,14 +573,14 @@ public class OdbcTest extends AbstractDatabaseTest {
 
 		for (String permission : DatabaseStructurePermissionSets.getPermissionsForViewer(databaseid)){
 			Permission permissionObject = new Permission();
-			permissionObject.setRole("viewer_"+databaseid);
+			permissionObject.setRole("viewer_"+projectId);
 			permissionObject.setPermission(permission);
 			session.save(permissionObject);
 		}
 		
 		UserRole pinga = new UserRole();
 		pinga.setPrincipalName(principal);
-		pinga.setRole("viewer_"+databaseid);
+		pinga.setRole("viewer_"+projectId);
 		session.save(pinga);
 		
 		transaction.commit();
@@ -633,15 +593,28 @@ public class OdbcTest extends AbstractDatabaseTest {
 
 		for (String permission : DatabaseStructurePermissionSets.getPermissionsForContributor(databaseid)){
 			Permission permissionObject = new Permission();
-			permissionObject.setRole("contributor_"+databaseid);
+			permissionObject.setRole("contributor_"+projectId);
 			permissionObject.setPermission(permission);
 			session.save(permissionObject);
 		}
 		
 		UserRole pinga = new UserRole();
 		pinga.setPrincipalName(principal);
-		pinga.setRole("contributor_"+databaseid);
+		pinga.setRole("contributor_"+projectId);
 		session.save(pinga);
+		
+		transaction.commit();
+	}
+	
+	private void dropRoles(String principal){
+
+		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
+		Transaction transaction = session.beginTransaction();
+
+		List<UserRole> roles = session.createCriteria(UserRole.class).add(Restrictions.eq("principalName", principal)).list();
+		for (UserRole role: roles){
+			session.delete(role);
+		}
 		
 		transaction.commit();
 	}

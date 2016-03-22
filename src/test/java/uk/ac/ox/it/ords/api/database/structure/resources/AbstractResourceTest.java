@@ -77,11 +77,11 @@ public class AbstractResourceTest extends AbstractShiroTest {
 		/// the resource classes, but I could be wrong. It doesn't seem
 		/// to bother any of the other modules.
 		/// 
-		DatabaseStructureRoleService service = DatabaseStructureRoleService.Factory.getInstance();
-		UserRole userRole = new UserRole();
-		userRole.setPrincipalName("bob");
-		userRole.setRole("viewer");
-		service.addUserRoleToDatabase(1, userRole);	
+		//DatabaseStructureRoleService service = DatabaseStructureRoleService.Factory.getInstance();
+		//UserRole userRole = new UserRole();
+		//userRole.setPrincipalName("bob");
+		//userRole.setRole("viewer");
+		//service.addUserRoleToDatabase(1, userRole);	
 		
 		//
 		// Set up the database

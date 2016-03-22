@@ -29,6 +29,7 @@ import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.EntityType;
 import uk.ac.ox.it.ords.api.database.structure.model.User;
@@ -132,8 +133,9 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		else {
 			db = this.cloneDatabase(id, instance, username);
 		}
+		
 		DatabaseStructureRoleService.Factory.getInstance()
-					.createInitialPermissions(db.getPhysicalDatabaseId());
+					.createInitialPermissions(getLogicalDatabase(db.getLogicalDatabaseId()));
 		return db;
 	}
 	
@@ -469,6 +471,32 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	
 	private String calculateInstanceName ( OrdsPhysicalDatabase db, String instance ){
 		return 	(instance + "_" + db.getPhysicalDatabaseId() + "_" + db.getLogicalDatabaseId()).toLowerCase();
+	}
+
+	@Override
+	public OrdsDB getLogicalDatabase(int dbId) throws Exception {
+
+		Transaction transaction = null;
+		Session session = this.getOrdsDBSessionFactory().openSession();
+		OrdsDB ordsdb = null;
+		try {
+			transaction = session.beginTransaction();
+			ordsdb = (OrdsDB) session.get(OrdsDB.class, dbId);
+			transaction.commit();
+		} catch (HibernateException e) {
+			log.error("Run time exception", e);
+			if (transaction != null && transaction.isActive()) {
+				try {
+					transaction.rollback();
+				} catch (HibernateException e1) {
+				}
+				throw e;
+			}
+			return null;
+		} finally {
+			session.close();
+		}
+		return ordsdb;
 	}
 
 }
