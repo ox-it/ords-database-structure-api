@@ -21,7 +21,6 @@ import java.util.List;
 
 import javax.sql.rowset.CachedRowSet;
 import javax.ws.rs.NotFoundException;
-import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -137,7 +136,6 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 		}
 
 		// Generate the SQL for creating the constraint
-		ArrayList<Object> parameters = new ArrayList<Object>();
 		if (isUnique != null && isUnique) {
 			query = String.format("ALTER TABLE %s ADD CONSTRAINT %s UNIQUE (%s)",
                     quote_ident(tableName),
@@ -227,9 +225,12 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 		}
 		String server = database.getDatabaseServer();
 		String newName = constraint.getNewname();
-		String query = "ALTER TABLE ? RENAME CONSTRAINT ? to ?";
-		List<Object> parameters = createParameterList(tableName, constraintName, newName);
-		this.runJDBCQuery(query, parameters, server, databaseName);
+		String query = String.format("ALTER TABLE %s RENAME CONSTRAINT %s to %s", 
+				quote_ident(tableName),
+				quote_ident(constraintName),
+				quote_ident(newName)
+				);
+		this.runJDBCQuery(query, null, server, databaseName);
 	}
 
 	
@@ -242,8 +243,11 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		String query = "ALTER TABLE ? DROP CONSTRAINT ?";
-		this.runJDBCQuery(query, createParameterList(tableName, constraintName), server, databaseName);
+		String query = String.format("ALTER TABLE %s DROP CONSTRAINT %s",
+				quote_ident(tableName),
+				quote_ident(constraintName)
+		);
+		this.runJDBCQuery(query, null, server, databaseName);
 	}
 	
 	

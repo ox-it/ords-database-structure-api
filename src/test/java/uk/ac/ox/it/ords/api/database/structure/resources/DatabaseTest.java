@@ -285,6 +285,18 @@ public class DatabaseTest extends AbstractDatabaseTest {
 		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/comment/false").post(commentRequest);
 		assertEquals(201, response.getStatus());
 		
+		// rename the PK constraint
+		pkey_contstraint = this.buildConstraintRequest("pkey_testTableRenamed", constraint_type.PRIMARY, columnNames, "", "");
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/constraint/pkey_testTable_1/false").put(pkey_contstraint);
+		assertEquals(200, response.getStatus());
+		
+		// delete the FK constraint
+		response = getClient().path("/"+dbID+"/MAIN/table/linkTable/constraint/link_constraint_2/false").delete();
+		assertEquals(200, response.getStatus());
+		
+		// delete the PK constraint
+		response = getClient().path("/"+dbID+"/MAIN/table/testTable/constraint/pkey_testTableRenamed/false").delete();
+		assertEquals(200, response.getStatus());
 		
 		// create an index
 		columns.clear();

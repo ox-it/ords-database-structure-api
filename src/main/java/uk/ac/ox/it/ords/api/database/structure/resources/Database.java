@@ -956,7 +956,7 @@ public class Database extends AbstractResource{
 	
 	
 	@DELETE
-	@Path("/constraint/database/{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
+	@Path("/{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response deleteTableConstraint ( 
 			@PathParam("id") int dbId,
@@ -964,6 +964,7 @@ public class Database extends AbstractResource{
 			@PathParam("tablename") String tableName,
 			@PathParam("conname") String constraintName,
 			@PathParam("staging") BooleanCheck staging ) {
+		
 		//
 		// Try and obtain the database
 		//
