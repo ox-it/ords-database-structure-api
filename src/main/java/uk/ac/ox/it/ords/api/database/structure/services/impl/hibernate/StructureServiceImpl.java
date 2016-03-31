@@ -450,6 +450,16 @@ public class StructureServiceImpl {
 	}
 
 	/**
+	 * Removes quotes
+	 * @param ident
+	 * @return
+	 */
+	protected String unquote(String ident){
+		ident = StringUtils.removeStart(ident, "\"");
+		ident = StringUtils.removeEnd(ident, "\"");
+		return ident;
+	}
+	/**
 	 * Mimicks the postgres function, surrounding a table or column name in
 	 * quotes, escaping existing quotes by doubling them.
 	 * 
@@ -715,7 +725,11 @@ public class StructureServiceImpl {
 			Object[] cols = (Object[]) sqlArray.getArray();
 			// ResultSet columnSet = sqlArray.getResultSet();
 			for (Object column : cols) {
-				columns.add(column.toString());
+				//
+				// PG may store the index columns as quoted identifiers, in which case we need
+				// to unquote them to return via the API
+				//
+				columns.add(unquote(column.toString()));
 			}
 			index.put("columns", columns);
 			if (rs.getBoolean("isprimary")) {
