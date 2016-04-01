@@ -19,16 +19,11 @@ package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Map;
 
 import javax.sql.rowset.CachedRowSet;
 import javax.ws.rs.NotFoundException;
 
-import org.hibernate.Transaction;
 import org.apache.commons.lang.StringUtils;
-import org.hibernate.SQLQuery;
-import org.hibernate.Session;
-import org.hibernate.type.StringType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,18 +44,19 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 	private final List<String> integerTypes = Arrays.asList("int", "integer",
 			"bigint", "smallint", "int2", "int4", "int8");
 
-	public ColumnRequest getColumnMetadata(int dbId, String instance,
-			String tableName, String columnName, boolean staging)
+	public ColumnRequest getColumnMetadata(
+			int dbId, 
+			String instance,
+			String tableName, 
+			String columnName, 
+			boolean staging
+			)
 			throws Exception {
 
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		String databaseName = this
-				.dbNameFromIDInstance(dbId, instance, staging);
-		Session session = this.getUserDBSessionFactory(databaseName, userName,
-				password).openSession();
-		try {
-			Transaction transaction = session.beginTransaction();
+		
+		String server = this.getPhysicalDatabaseFromIDInstance(dbId, instance).getDatabaseServer();		
+		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
+
 			ArrayList<String> fields = new ArrayList<String>();
 			fields.add("column_name");
 			fields.add("data_type");
@@ -72,43 +68,40 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 			// fields.add("ordinal_position");
 
 			String command = String
-					.format("select %s from INFORMATION_SCHEMA.COLUMNS where table_name = :table and column_name = :column ORDER BY ordinal_position ASC",
-							StringUtils.join(fields.iterator(), ","));
-
-			SQLQuery query = session.createSQLQuery(command);
-			query.setParameter("table", tableName);
-			query.setParameter("column", columnName);
-			query.addScalar("column_name", new StringType());
-			query.addScalar("data_type", new StringType());
-			query.addScalar("column_default", new StringType());
-			query.addScalar("is_nullable", new StringType());
-
-			@SuppressWarnings("rawtypes")
-			List results = query.list();
-			if (results.size() != 1) {
+					.format("select %s from INFORMATION_SCHEMA.COLUMNS where table_name = ? and column_name = ? ORDER BY ordinal_position ASC",
+							StringUtils.join(fields.iterator(), ",")
+							);
+			
+			CachedRowSet results = this.runJDBCQuery(command, createParameterList(tableName, columnName), server, databaseName);
+			
+			if (!results.next()){
 				return null;
 			}
-			@SuppressWarnings("rawtypes")
-			Map row = (Map) results.get(0);
 
 			ColumnRequest column = new ColumnRequest();
 
-			column.setNewname(row.get("column_name").toString());
-			column.setDatatype(row.get("data_type").toString());
-			column.setDefaultvalue(row.get("column_default").toString());
-			boolean nullable = row.get("is_nullable").toString()
-					.compareToIgnoreCase("YES") == 0;
-			column.setNullable(nullable);
-			transaction.commit();
+			column.setNewname(results.getString("column_name"));
+			column.setDatatype(results.getString("data_type"));
+			column.setDefaultvalue(results.getString("column_default"));
+			column.setNullable(results.getString("is_nullable").equals("YES"));
+						
+			boolean autoIncrement = false;
+			// Parse the default value to an interface-friendly
+			// format, and identify if the field is auto-incremented
+			if (column.getDefaultvalue() != null) {
+				if (column.getDefaultvalue().equals("''::text")) { // CSV
+					column.setDefaultvalue("");
+				} else if (column.getDefaultvalue()
+						.matches("nextval\\('[A-Za-z0-9_\"]+'::regclass\\)")) {
+					column.setDefaultvalue("");
+					autoIncrement = true;
+				} else if (column.getDefaultvalue().startsWith("NULL::")) {
+					column.setDefaultvalue(null);
+				}
+			}
+			column.setAutoincrement(autoIncrement);
+			
 			return column;
-		} catch (Exception e) {
-			log.debug(e.getMessage());
-			session.getTransaction().rollback();
-			throw e;
-
-		} finally {
-			session.close();
-		}
 	}
 
 	public void createColumn(int dbId, String instance, String tableName,
@@ -458,9 +451,8 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 					"Attempt to delete column %s which doesn't exist!",
 					columnName));
 		}
-		String query = "ALTER TABLE ? DROP ?;";
-		List<Object> parameters = this.createParameterList(tableName, columnName);
-		this.runJDBCQuery(query, parameters, server, databaseName);
+		String query = String.format("ALTER TABLE %s DROP %s;", quote_ident(tableName), quote_ident(columnName));
+		this.runJDBCQuery(query, null, server, databaseName);
 	}
 
 	private String generateSequenceName(String tableName, String columnName) {
