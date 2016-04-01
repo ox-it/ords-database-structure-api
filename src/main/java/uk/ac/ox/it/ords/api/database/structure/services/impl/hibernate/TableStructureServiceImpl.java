@@ -24,7 +24,6 @@ import javax.sql.rowset.CachedRowSet;
 import javax.ws.rs.NotFoundException;
 
 import org.hibernate.Criteria;
-import org.hibernate.SQLQuery;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
@@ -38,12 +37,6 @@ import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.api.database.structure.services.TableStructureService;
 
 public class TableStructureServiceImpl extends StructureServiceImpl implements TableStructureService {
-
-	@Override
-	public TableList getTableList(int dbId, String instance, boolean staging) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 	@Override
 	public TableList getTableMetadata(int dbId, String instance,

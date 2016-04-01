@@ -22,16 +22,6 @@ import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.TableStructureServiceImpl;
 
 public interface TableStructureService {
-
-	/**
-	 * 
-	 * @param dbId
-	 * @param instance
-	 * @return
-	 * @throws Exception
-	 */
-	public TableList getTableList ( int dbId, String instance, boolean staging ) throws Exception;
-	
 	
 	/**
 	 * 
