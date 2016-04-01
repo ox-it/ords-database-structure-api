@@ -17,7 +17,6 @@
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import javax.sql.rowset.CachedRowSet;
 import javax.ws.rs.NotFoundException;
