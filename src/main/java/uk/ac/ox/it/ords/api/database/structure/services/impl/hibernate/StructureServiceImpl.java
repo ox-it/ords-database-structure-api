@@ -42,15 +42,14 @@ import org.hibernate.criterion.Restrictions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import uk.ac.ox.it.ords.api.database.structure.services.impl.AbstractStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.EntityType;
 import uk.ac.ox.it.ords.api.database.structure.model.User;
-import uk.ac.ox.it.ords.api.database.structure.services.ServerConfigurationService;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
 
-public class StructureServiceImpl {
+public class StructureServiceImpl extends AbstractStructureService {
 	Logger log = LoggerFactory.getLogger(StructureServiceImpl.class);
 	protected static String ODBC_MASTER_PASSWORD_PROPERTY = "ords.odbc.masterpassword";
 	protected static String ORDS_DATABASE_NAME = "ords.database.name";
@@ -447,42 +446,6 @@ public class StructureServiceImpl {
 
 	protected String calculateStagingName(String dbName) {
 		return dbName + "_staging";
-	}
-
-	/**
-	 * Removes quotes
-	 * @param ident
-	 * @return
-	 */
-	protected String unquote(String ident){
-		ident = StringUtils.removeStart(ident, "\"");
-		ident = StringUtils.removeEnd(ident, "\"");
-		return ident;
-	}
-	/**
-	 * Mimicks the postgres function, surrounding a table or column name in
-	 * quotes, escaping existing quotes by doubling them.
-	 * 
-	 * @param ident
-	 *            The table, column or other object name.
-	 * @return
-	 */
-	protected String quote_ident(String ident) {
-		return "\"" + ident.replace("\"", "\"\"") + "\"";
-	}
-
-	/**
-	 * Mimicks the postgres function, surrounding a string in quotes, escaping
-	 * existing quotes by doubling them.
-	 * 
-	 * @param literal
-	 * @return
-	 */
-	protected String quote_literal(String literal) {
-		if (literal == null) {
-			return literal;
-		}
-		return "'" + literal.replace("'", "''") + "'";
 	}
 
 	protected String columnComment(String databaseName, String databaseServer, String tableName,
