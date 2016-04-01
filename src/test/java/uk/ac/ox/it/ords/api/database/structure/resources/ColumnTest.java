@@ -336,6 +336,8 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		assertEquals(200, response.getStatus());
 
 		ColumnRequest column = response.readEntity(ColumnRequest.class);
+		assertEquals("text", column.getDatatype());
+
 		
 		logout();
 	}
