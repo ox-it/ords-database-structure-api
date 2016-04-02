@@ -215,7 +215,7 @@ public class Database extends AbstractResource{
 	@Path("{id}/{instance}/staging")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getStagingDatabaseMetadata ( 	@PathParam("id") int dbId,
-											@PathParam("instance") String instance) {
+											@PathParam("instance") String instance) throws Exception {
 		
 		//
 		// Try and obtain the database
@@ -227,6 +227,13 @@ public class Database extends AbstractResource{
 			return Response.status(404).build();
 		}
 		
+		//
+		// Check the staging version exists
+		//
+		if (!DatabaseStructureService.Factory.getInstance().checkDatabaseExists(dbId, instance, true)){
+			return Response.status(404).build();
+		}		
+
 		TableList tableList;
 		if (!SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
@@ -311,7 +318,7 @@ public class Database extends AbstractResource{
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response dropStaginDatabase (
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance ) {
+			@PathParam("instance") String instance ) throws Exception{
 		
 		//
 		// Try and obtain the database
@@ -323,6 +330,12 @@ public class Database extends AbstractResource{
 			return Response.status(404).build();
 		}
 		
+		//
+		// Check the staging version exists
+		//
+		if (!DatabaseStructureService.Factory.getInstance().checkDatabaseExists(dbId, instance, true)){
+			return Response.status(404).build();
+		}
 		
 		if (!SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_DELETE(physicalDatabase.getLogicalDatabaseId()))) {

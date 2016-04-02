@@ -47,6 +47,16 @@ public interface DatabaseStructureService {
 	public OrdsPhysicalDatabase createNewDatabase ( int logicalDBId , DatabaseRequest databaseDTO, String instance) throws Exception;
 	
 	/**
+	 * Checks if the specified database exists
+	 * @param dbId
+	 * @param instance
+	 * @param staging
+	 * @return
+	 * @throws Exception
+	 */
+	public boolean checkDatabaseExists( int dbId, String instance, boolean staging ) throws Exception;
+	
+	/**
 	 * Gets the metadata for a specific database
 	 * @param dbId
 	 * @param instanceId

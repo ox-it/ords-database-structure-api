@@ -499,4 +499,21 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		return ordsdb;
 	}
 
+
+	@Override
+	public boolean checkDatabaseExists(int dbId, String instance,
+			boolean staging) throws Exception {
+
+		OrdsPhysicalDatabase physicalDatabase = this.getDatabaseMetaData(dbId, instance);
+		String databaseName = this.calculateInstanceName(physicalDatabase, instance);
+		String server = physicalDatabase.getDatabaseServer();
+		if (staging){
+			databaseName = this.calculateStagingName(databaseName);
+		}
+		String query = "SELECT COUNT(*) as count from pg_database WHERE datname = ?";
+		List<Object> parameters = this.createParameterList(databaseName);
+		CachedRowSet result = this.runJDBCQuery(query, parameters, server, "postgres");
+		result.next();
+		return result.getInt(1) > 0;
+	}
 }
