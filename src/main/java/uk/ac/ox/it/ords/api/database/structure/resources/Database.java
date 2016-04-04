@@ -16,6 +16,9 @@
 
 package uk.ac.ox.it.ords.api.database.structure.resources;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+
 import java.util.List;
 
 import javax.annotation.PostConstruct;
@@ -48,6 +51,7 @@ import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService
 import uk.ac.ox.it.ords.api.database.structure.services.MessageEntity;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 
+@Api(value="Database Structure")
 @Path("/")
 public class Database extends AbstractResource{
 	
@@ -61,7 +65,12 @@ public class Database extends AbstractResource{
 	 * Database Resources
 	 ********************************************************/
 
-
+	@ApiOperation(
+			value="Gets a list of databases", 
+			notes="Returns the databases for the current user, or the public databases if not logged in", 
+			response = uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.class, 
+			responseContainer = "List"
+			)
 	@GET
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response getDatabases ( ) {
@@ -78,7 +87,11 @@ public class Database extends AbstractResource{
 		return Response.ok(databaseList).build();
 	}
 	
-
+	@ApiOperation(
+			value="Gets the metadata for a specific database", 
+			notes="Specifically this lists the tables in the database.", 
+			response = uk.ac.ox.it.ords.api.database.structure.services.TableList.class
+			)
 	@GET
 	@Path("{id}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -115,7 +128,11 @@ public class Database extends AbstractResource{
 	}
 
 
-	
+	@ApiOperation(
+			value="Creates a new empty database", 
+			notes="", 
+			response = uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.class
+			)
 	@POST
 	@Path("")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -137,6 +154,11 @@ public class Database extends AbstractResource{
 		}
 	}
 	
+	@ApiOperation(
+			value="Creates a copy of the specified database as a new database", 
+			notes="", 
+			response = uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.class
+			)
 	@POST
 	@Path("{id}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -175,6 +197,11 @@ public class Database extends AbstractResource{
 		}
 	}
 	
+	@ApiOperation(
+			value="Merges another database into this one", 
+			notes="Note the resource in the URL is the target and is overwritten by the source indicated with the getCloneFrom property", 
+			response = uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.class
+			)
 	@PUT
 	@Path("{id}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -225,7 +252,10 @@ public class Database extends AbstractResource{
 		
 	}
 	
-	
+	@ApiOperation(
+			value="Deletes the specified database", 
+			notes=""
+			)
 	@DELETE
 	@Path("{id}")
 	@Produces( MediaType.APPLICATION_JSON )

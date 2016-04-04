@@ -38,6 +38,10 @@
             org.apache.cxf.jaxrs.servlet.CXFNonSpringJaxrsServlet
         </servlet-class>
          <init-param>
+        	<param-name>jaxrs.features</param-name>
+        	<param-value>uk.ac.ox.it.ords.api.database.structure.documentation.Swagger</param-value>
+         </init-param>
+         <init-param>
 		  <param-name>jaxrs.serviceClasses</param-name>
 		  <param-value>
 		    uk.ac.ox.it.ords.api.database.structure.resources.Database,
@@ -49,7 +53,8 @@
            <param-value>
               com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider,
               uk.ac.ox.it.ords.api.database.structure.server.UnrecognizedPropertyExceptionMapper,
-              uk.ac.ox.it.ords.api.database.structure.server.ValidationExceptionMapper
+              uk.ac.ox.it.ords.api.database.structure.server.ValidationExceptionMapper,
+              org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter
            </param-value>
         </init-param>
 
