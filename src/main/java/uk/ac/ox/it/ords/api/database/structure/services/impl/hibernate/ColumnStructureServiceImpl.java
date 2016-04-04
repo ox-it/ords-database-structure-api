@@ -286,8 +286,10 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 					log.error("Attempt to remove autoincrement where non is set");
 					throw new BadParameterException(
 							"Auto-increment is not set so cannot be removed");
-					
+				} else {
+					sequenceName = results.getString("sequence");
 				}
+				
 			}
 		}
 		// If a new name for the column is specified, check that a column
