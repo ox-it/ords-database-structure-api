@@ -84,6 +84,34 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		logout();
 	}
 	
+	@Test
+	public void getColumnUnauth(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
+		
+		// Create a column
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		logout();
+		
+		// Check column exists
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").get();
+		assertEquals(403, response.getStatus());
+
+	}
+	
+	
+	@Test
+	public void createColumnUnauth(){
+		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").post(column1);
+		assertEquals(403, response.getStatus());
+	}
+	
 	
 	@Test
 	public void createAutoIncrementColumn(){
@@ -156,6 +184,39 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column = response.readEntity(ColumnRequest.class);
 		assertEquals("'banana'::character varying", column.getDefaultvalue());
 
+		logout();
+	}
+	
+	@Test
+	public void createNotNullColumnWithoutDefault(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("testcol", "varchar", null, false, false);
+		
+		// Create a column
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").post(column1);
+		assertEquals(400, response.getStatus());
+
+		logout();
+	}
+	
+	@Test
+	public void createColumnWithoutType(){
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		ColumnRequest column1 = this.buildColumnRequest("testcol", null, "banana", true, false);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").post(column1);
+		assertEquals(400, response.getStatus());
+		logout();
+	}
+	
+	
+	@Test
+	public void createColumnWithNull(){
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").post(null);
+		assertEquals(400, response.getStatus());
 		logout();
 	}
 	
@@ -239,6 +300,169 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").get();
 		column = response.readEntity(ColumnRequest.class);
 		assertTrue(column.isAutoincrement());
+
+		logout();
+	}
+	
+	@Test
+	public void updateColumnToAutoNonInteger(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("auto", "varchar", null, true, false);
+		
+		// Create a column
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		// Check column exists
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").get();
+		assertEquals(200, response.getStatus());
+		
+		ColumnRequest column = response.readEntity(ColumnRequest.class);
+		assertFalse(column.isAutoincrement());
+		
+		// Update
+		requestStruct request = new requestStruct();
+		request.autoincrement = "true";
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").put(request);
+		assertEquals(400, response.getStatus());
+
+		logout();
+	}
+	
+	@Test
+	public void updateColumnToAutoWithDefault(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("auto", "int", null, true, false);
+		
+		// Create a column
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		// Check column exists
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").get();
+		assertEquals(200, response.getStatus());
+		
+		ColumnRequest column = response.readEntity(ColumnRequest.class);
+		assertFalse(column.isAutoincrement());
+		
+		// Update
+		requestStruct request = new requestStruct();
+		request.autoincrement = "true";
+		request.defaultvalue = "0";
+		
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").put(request);
+		assertEquals(400, response.getStatus());
+
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").get();
+		column = response.readEntity(ColumnRequest.class);
+		assertFalse(column.isAutoincrement());
+
+		logout();
+	}
+	
+	@Test
+	public void updateColumnRemoveAuto(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("auto", "int", null, false, true);
+		
+		// Create a column
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		// Check column exists
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").get();
+		assertEquals(200, response.getStatus());
+		
+		ColumnRequest column = response.readEntity(ColumnRequest.class);
+		assertTrue(column.isAutoincrement());
+		
+		// Update
+		requestStruct request = new requestStruct();
+		request.autoincrement = "false";
+		request.defaultvalue = "";
+		
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").put(request);
+		assertEquals(200, response.getStatus());
+
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").get();
+		column = response.readEntity(ColumnRequest.class);
+		assertFalse(column.isAutoincrement());
+
+		logout();
+	}
+	
+	@Test
+	public void updateColumnNonexisting(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		requestStruct request = new requestStruct();
+		request.autoincrement = "false";
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/nope/false").put(request);
+		assertEquals(404, response.getStatus());
+		
+		response = getClient().path("/"+physicalDatabaseId+"/table/nope/column/nope/false").put(request);
+		assertEquals(404, response.getStatus());
+
+		logout();
+	}
+	
+	@Test
+	public void updateColumnToAutoAgain(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("auto", "int", null, true, false);
+		
+		// Create a column
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		// Check column exists
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").get();
+		assertEquals(200, response.getStatus());
+		
+		ColumnRequest column = response.readEntity(ColumnRequest.class);
+		assertFalse(column.isAutoincrement());
+		
+		// Update
+		requestStruct request = new requestStruct();
+		request.autoincrement = "true";
+		
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").put(request);
+		assertEquals(200, response.getStatus());
+
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").get();
+		column = response.readEntity(ColumnRequest.class);
+		assertTrue(column.isAutoincrement());
+		
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").put(request);
+		assertEquals(400, response.getStatus());
+
+		logout();
+	}
+	
+	@Test
+	public void updateColumnWithNull(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		ColumnRequest column1 = this.buildColumnRequest("auto", "int", null, true, false);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		requestStruct request = new requestStruct();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").put(request);
+		assertEquals(400, response.getStatus());
 
 		logout();
 	}
