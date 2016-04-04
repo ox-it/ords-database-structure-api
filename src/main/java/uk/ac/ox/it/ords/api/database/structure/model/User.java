@@ -20,6 +20,9 @@ public class User {
     private String principalType;
     private String odbcUser;
     
+    @JsonIgnore 
+    private String token;
+    
     @Id
     @GeneratedValue
     private int userId;
@@ -127,6 +130,16 @@ public class User {
 
 	public void setOdbcUser(String odbcUser) {
 		this.odbcUser = odbcUser;
+	}
+
+    @JsonIgnore 
+	public String getToken() {
+		return token;
+	}
+    
+    @JsonIgnore 
+	public void setToken(String token) {
+		this.token = token;
 	}
 
 }
