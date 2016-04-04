@@ -18,7 +18,11 @@ package uk.ac.ox.it.ords.api.database.structure.resources;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.ResponseHeader;
 
+import java.net.URI;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
@@ -288,7 +292,11 @@ public class Database extends AbstractResource{
 
 	
 
-// staging version resource	
+	@ApiOperation(
+			value="Gets the metadata for a staging database", 
+			notes="Specifically this lists the tables in the database.", 
+			response = uk.ac.ox.it.ords.api.database.structure.services.TableList.class
+			)
 	@GET
 	@Path("{id}/staging")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -327,6 +335,17 @@ public class Database extends AbstractResource{
 		return Response.ok(tableList).build();
 	}
 	
+	@ApiOperation(
+			value="Creates a new staging database for the specified database", 
+			notes="" 
+			)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 201, message = "Staging database successfully created.",
+					responseHeaders = @ResponseHeader(name = "Location", description = "The URI of the staging database", response = URI.class)
+					),
+		    @ApiResponse(code = 404, message = "Original database does not exist."),
+		    @ApiResponse(code = 403, message = "Not authorized to create a staging database.")
+	})
 	@POST
 	@Path("{id}/staging")
 	@Produces( MediaType.APPLICATION_JSON )
@@ -358,7 +377,15 @@ public class Database extends AbstractResource{
 		}
 	}
 	
-	
+	@ApiOperation(
+			value="Merges a staging database back into the original database it was derived from", 
+			notes="" 
+			)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 200, message = "Staging database successfully merged."),
+		    @ApiResponse(code = 404, message = "Original database does not exist."),
+		    @ApiResponse(code = 403, message = "Not authorized to create a staging database.")
+	})
 	@PUT
 	@Path("{id}/staging")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -390,7 +417,15 @@ public class Database extends AbstractResource{
 	}
 	
 	
-	
+	@ApiOperation(
+			value="Deletes a staging database", 
+			notes="" 
+			)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 200, message = "Staging database successfully deleted."),
+		    @ApiResponse(code = 404, message = "Staging database does not exist."),
+		    @ApiResponse(code = 403, message = "Not authorized to delete staging database.")
+	})
 	@DELETE
 	@Path("{id}/staging")
 	@Produces( MediaType.APPLICATION_JSON )
@@ -475,7 +510,16 @@ public class Database extends AbstractResource{
 	 * Table Resources
 	 ********************************************************/
 	
-	
+	@ApiOperation(
+			value="Gets metadata for a table", 
+			notes="",
+			response = uk.ac.ox.it.ords.api.database.structure.services.TableList.class
+			)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 200, message = "Table metadata retrieved."),
+		    @ApiResponse(code = 404, message = "Table does not exist."),
+		    @ApiResponse(code = 403, message = "Not authorized to view table.")
+	})
 	@GET
 	@Path("{id}/table/{tablename}/{staging}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -507,7 +551,18 @@ public class Database extends AbstractResource{
 		}
 	}
 	
-	
+	@ApiOperation(
+			value="Create a table", 
+			notes="",
+			response = uk.ac.ox.it.ords.api.database.structure.services.TableList.class
+			)
+	@ApiResponses(value = { 
+			@ApiResponse(code = 201, message = "Table successfully created.",
+					responseHeaders = @ResponseHeader(name = "Location", description = "The URI of the table", response = URI.class)
+					),
+		    @ApiResponse(code = 404, message = "Database does not exist."),
+		    @ApiResponse(code = 403, message = "Not authorized to create table.")
+	})
 	@POST
 	@Path("{id}/table/{tablename}/{staging}")
 	@Produces( MediaType.APPLICATION_JSON )
@@ -675,6 +730,10 @@ public class Database extends AbstractResource{
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
 			return forbidden();
+		}
+		
+		if (newColumn == null){
+			return Response.status(400).build();	
 		}
 		
 		try {
