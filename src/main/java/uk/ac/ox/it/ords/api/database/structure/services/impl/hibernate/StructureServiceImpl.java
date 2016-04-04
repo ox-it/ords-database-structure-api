@@ -656,12 +656,8 @@ public class StructureServiceImpl extends AbstractStructureService {
 		HashMap<String, String> columnDescription;
 		List<HashMap<String, String>> columnDescriptions = new ArrayList<HashMap<String, String>>();
 		CachedRowSet results = this.runJDBCQuery(query, null, server, databaseName);
-		
 
 		// First get all column names
-		if (log.isDebugEnabled()) {
-			log.debug(String.format("Found columns for table %s", tableName));
-		}
 		while (results.next()) {
 			columnDescription = new HashMap<String, String>();
 			for (String field : fields) {
@@ -673,11 +669,6 @@ public class StructureServiceImpl extends AbstractStructureService {
 				}
 			}
 			columnDescriptions.add(columnDescription);
-		}
-
-		if (log.isDebugEnabled()) {
-			log.debug("getTableDescription:return " + columnDescriptions.size()
-					+ " entries");
 		}
 
 		return columnDescriptions;
