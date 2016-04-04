@@ -90,13 +90,21 @@ public class IndexServiceImpl extends StructureServiceImpl
 	public void updateIndex(OrdsPhysicalDatabase database, String tableName,
 			String indexName, IndexRequest index, boolean staging)
 			throws Exception {
+		String userName = this.getODBCUserName();
+		String password = this.getODBCPassword();
         String newName = index.getNewname();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-       
+		
+		if ( !this.checkIndexExists(tableName, indexName, databaseName, server, userName, password)){
+			throw new NotFoundException("");
+		}
+        if (indexName.equals(newName) || newName == null || newName.isEmpty()){
+        	throw new BadParameterException();
+        }
 		String query = String.format("ALTER INDEX %s RENAME TO %s",
                 quote_ident(indexName),
                 quote_ident(newName));
