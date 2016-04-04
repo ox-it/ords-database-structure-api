@@ -16,6 +16,7 @@
 
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.sql.rowset.CachedRowSet;
@@ -32,13 +33,13 @@ import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.EntityType;
-import uk.ac.ox.it.ords.api.database.structure.model.User;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureRoleService;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.api.database.structure.model.SchemaDesignerTable;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissionSets;
 import uk.ac.ox.it.ords.security.model.Permission;
+import uk.ac.ox.it.ords.security.permissions.Permissions;
 import uk.ac.ox.it.ords.security.services.PermissionsService;
 
 public class DatabaseStructureServiceImpl extends StructureServiceImpl
@@ -91,22 +92,20 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	}
 	
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public List<OrdsPhysicalDatabase> getDatabaseList() throws Exception {
-		String principalName = SecurityUtils.getSubject().getPrincipal()
-				.toString();
-
-		User u = this.getUserByPrincipal(principalName);
-
+		
+		List<OrdsPhysicalDatabase> databases = null;
+		ArrayList<OrdsPhysicalDatabase> visibleDatabases = new ArrayList<OrdsPhysicalDatabase>();
+		
 		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
-			@SuppressWarnings("unchecked")
-			List<OrdsPhysicalDatabase> dbs = session
+			databases = session
 					.createCriteria(OrdsPhysicalDatabase.class)
-					.add(Restrictions.eq("actorId", u.getUserId())).list();
+					.list();
 			transaction.commit();
-			return dbs;
 		} catch (Exception e) {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
@@ -116,7 +115,13 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 			session.close();
 		}
 
-
+		for (OrdsPhysicalDatabase database : databases){
+			if (SecurityUtils.getSubject().isPermitted(Permissions.DATABASE_VIEW(database.getLogicalDatabaseId()))){
+				visibleDatabases.add(database);
+			}
+		}
+		
+		return visibleDatabases;
 	}	
 
 	@Override
