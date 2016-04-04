@@ -20,6 +20,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Map;
+
 import javax.ws.rs.core.Response;
 
 import org.junit.After;
@@ -27,9 +29,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.ColumnRequest;
+import uk.ac.ox.it.ords.api.database.structure.dto.ConstraintRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.TableRenameRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
+import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 
 public class TableTest extends AbstractDatabaseTestRunner{
 
@@ -208,6 +212,60 @@ public class TableTest extends AbstractDatabaseTestRunner{
 		
 		response = getClient().path("/"+physicalDatabaseId+"/table/testtable2/false").delete();
 		assertEquals(200, response.getStatus());
+		
+		logout();
+	}
+	
+	@Test
+	public void linkedTablesTest(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");	
+		
+		// Table 1
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/t1/false").post(null);
+		assertEquals(201, response.getStatus());
+		
+		ColumnRequest column1 = this.buildColumnRequest("pk", "int", null, false, true);
+		response = getClient().path("/"+physicalDatabaseId+"/table/t1/column/pk/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		String[] columns = {"pk"};
+		ConstraintRequest constraint = this.buildConstraintRequest("pk", DatabaseTest.constraint_type.PRIMARY, columns, null, null);
+		response = getClient().path("/"+physicalDatabaseId+"/table/t1/constraint/pk/false").post(constraint);
+		assertEquals(201, response.getStatus());
+		
+		// Table 2
+		response = getClient().path("/"+physicalDatabaseId+"/table/t2/false").post(null);
+		assertEquals(201, response.getStatus());
+		
+		ColumnRequest column2 = this.buildColumnRequest("fk", "int", null, true, false);
+		response = getClient().path("/"+physicalDatabaseId+"/table/t2/column/fk/false").post(column2);
+		assertEquals(201, response.getStatus());
+		
+		String[] columns2 = {"fk"};
+		constraint = this.buildConstraintRequest("fk", DatabaseTest.constraint_type.FOREIGN, columns2, "t1", "pk");
+		response = getClient().path("/"+physicalDatabaseId+"/table/t2/constraint/fk/false").post(constraint);
+		assertEquals(201, response.getStatus());
+		
+		response = getClient().path("/"+physicalDatabaseId+"/table/t1/false").get();
+		assertEquals(200, response.getStatus());
+	
+		TableList tables = response.readEntity(TableList.class);
+		assertEquals(1, tables.getTables().size());
+		Map<String,Map> t1 = (Map<String, Map>) tables.getTables().get("t1");
+		Map<String,String> t1Columns = (Map<String, String>) t1.get("columns");
+		assertEquals(1, t1Columns.size());
+		
+		response = getClient().path("/"+physicalDatabaseId+"/table/t2/false").get();
+		assertEquals(200, response.getStatus());
+	
+		tables = response.readEntity(TableList.class);
+		assertEquals(1, tables.getTables().size());
+		Map<String,Map> t2 = (Map<String, Map>) tables.getTables().get("t2");
+		Map<String,String> t2Columns = (Map<String, String>) t2.get("columns");
+		assertEquals(1, t2Columns.size());
+		Map<String,String> relations = (Map<String, String>) t2.get("relations");
+		assertEquals(1, relations.size());
 		
 		logout();
 	}
