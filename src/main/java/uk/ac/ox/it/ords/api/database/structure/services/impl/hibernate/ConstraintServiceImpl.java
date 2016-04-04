@@ -17,6 +17,7 @@
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.sql.rowset.CachedRowSet;
 import javax.ws.rs.NotFoundException;
@@ -35,12 +36,11 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 			ConstraintService {
 
 	@Override
-	public MessageEntity getConstraint(int dbId, String instance,
+	public MessageEntity getConstraint(OrdsPhysicalDatabase database,
 			String tableName, String constraintName, boolean staging)
 			throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -57,14 +57,13 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 	
 
 	@Override
-	public void createConstraint(int dbId, String instance, String tableName,
+	public void createConstraint(OrdsPhysicalDatabase database, String tableName,
 			String constraintName, ConstraintRequest newConstraint,
 			boolean staging) throws Exception {
 		String query = "";
 
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -76,14 +75,14 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 		Boolean isForeign = newConstraint.isForeign();
 		Boolean isPrimary = newConstraint.isPrimary();
 
-		ArrayList columnsList = new ArrayList();
-		ArrayList columnsArray = newConstraint.getColumns();
+		List<String> columnsList = new ArrayList<String>();
+		String[] columnsArray = newConstraint.getColumns();
 		String columns = "";
 
 		if ((isUnique != null && isUnique) || (isForeign != null && isForeign)
 				|| (isPrimary != null && isPrimary)) {
-			// If we're creating a Unique, Foreign or Primary Key constaint
-			if (columnsArray == null || columnsArray.isEmpty()) {
+			// If we're creating a Unique, Foreign or Primary Key constraint
+			if (columnsArray == null || columnsArray.length == 0) {
 				// If no columns are specified, return an error
 				// message = emd.getMessage("Rst035").getText();
 				throw new BadParameterException("No columns specified");
@@ -98,7 +97,7 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 			} else {
 				// If we're creating a foreign key, make sure there's
 				// only one column
-				if (columnsArray.size() > 1) {
+				if (columnsArray.length > 1) {
 					// message = emd.getMessage("Rst068").getText();
 					throw new BadParameterException(
 							"Only 1 column can be specified for a foreign key");
@@ -148,12 +147,12 @@ public class ConstraintServiceImpl extends StructureServiceImpl
                     columns); 
 		} 
 		else if (isForeign != null && isForeign) {
-			String column = newConstraint.getColumn();
+			String column = newConstraint.getColumns()[0];
 			String refTable = newConstraint.getReftable();
 
 			String refColumn = newConstraint.getRefcolumn();
 
-			// If this is a foeign key, make sure there is a
+			// If this is a foreign key, make sure there is a
 			// referenced table specified
 			if (refTable == null || refTable.isEmpty()) {
 				// message = emd.getMessage("Rst049").getText();
@@ -214,10 +213,9 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 	
 
 	@Override
-	public void updateConstraint(int dbId, String instance, String tableName,
+	public void updateConstraint(OrdsPhysicalDatabase database, String tableName,
 			String constraintName, ConstraintRequest constraint, boolean staging)
 			throws Exception {
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -234,13 +232,20 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 
 	
 	@Override
-	public void deleteConstraint(int dbId, String instance, String tableName,
+	public void deleteConstraint(OrdsPhysicalDatabase database, String tableName,
 			String constraintName, boolean staging) throws Exception {
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
+		
+		String userName = this.getODBCUserName();
+		String password = this.getODBCPassword();
+		
+		if (!this.checkConstraintExists(tableName, constraintName, databaseName, database.getDatabaseServer(), userName, password)){
+			throw new NotFoundException();
+		}
+		
 		String server = database.getDatabaseServer();
 		String query = String.format("ALTER TABLE %s DROP CONSTRAINT %s",
 				quote_ident(tableName),

@@ -44,7 +44,18 @@ public interface DatabaseStructureService {
 	 * @return
 	 * @throws Exception
 	 */
-	public OrdsPhysicalDatabase createNewDatabase ( int logicalDBId , DatabaseRequest databaseDTO, String instance) throws Exception;
+	public OrdsPhysicalDatabase createNewDatabase (DatabaseRequest databaseDTO) throws Exception;
+
+	
+	/**
+	 * Creates a new database for the current user principal. Passing null for newDatabase
+	 * uses default values and names for the database.
+	 * @param newDatabase
+	 * @return
+	 * @throws Exception
+	 */
+	public OrdsPhysicalDatabase createNewDatabaseFromExisting ( int sourceId , DatabaseRequest databaseDTO) throws Exception;
+
 	
 	/**
 	 * Checks if the specified database exists
@@ -54,7 +65,7 @@ public interface DatabaseStructureService {
 	 * @return
 	 * @throws Exception
 	 */
-	public boolean checkDatabaseExists( int dbId, String instance, boolean staging ) throws Exception;
+	public boolean checkDatabaseExists( int dbId, boolean staging ) throws Exception;
 	
 	/**
 	 * Gets the metadata for a specific database
@@ -63,7 +74,7 @@ public interface DatabaseStructureService {
 	 * @return
 	 * @throws Exception
 	 */
-	public OrdsPhysicalDatabase getDatabaseMetaData ( int dbId, String instance ) throws Exception;
+	public OrdsPhysicalDatabase getDatabaseMetaData ( int dbId ) throws Exception;
 	
 	/**
 	 * Gets the logical database (group) for a specific database
@@ -81,7 +92,7 @@ public interface DatabaseStructureService {
 	 * @return
 	 * @throws Exception
 	 */
-	public TableList getDatabaseTableList ( int idbId, String instance, boolean staging ) throws Exception;
+	public TableList getDatabaseTableList ( int idbId, boolean staging ) throws Exception;
 	
 	/**
 	 * Creates a staging database for editing
@@ -89,7 +100,7 @@ public interface DatabaseStructureService {
 	 * @param instance
 	 * @throws Exception
 	 */
-	public String createNewStagingDatabase ( int dbId, String instance ) throws Exception;
+	public String createNewStagingDatabase ( int dbId ) throws Exception;
 	
 	/**
 	 * Updates the metadata for the staging database
@@ -104,14 +115,14 @@ public interface DatabaseStructureService {
 	 * @param dbId
 	 * @throws Exception
 	 */
-	public void mergeStagingToActual ( int dbId, String instance ) throws Exception;
+	public void mergeStagingToActual ( int mainId ) throws Exception;
 	
 	/**
 	 * Deletes a specific database
 	 * @param dbId
 	 * @throws Exception
 	 */
-	public void deleteDatabase ( int dbId, String instance, boolean Staging ) throws Exception;
+	public void deleteDatabase ( int dbId, boolean Staging ) throws Exception;
 	
 	/**
 	 * Deletes main and replaces it with the instance
@@ -120,7 +131,7 @@ public interface DatabaseStructureService {
 	 * @return
 	 * @throws Exception
 	 */
-	public OrdsPhysicalDatabase mergeInstanceToMain( int dbId, String instance ) throws Exception;
+	public OrdsPhysicalDatabase mergeInstanceToMain( OrdsPhysicalDatabase source, OrdsPhysicalDatabase target ) throws Exception;
 	
 	/**
 	 * Factory for obtaining implementations

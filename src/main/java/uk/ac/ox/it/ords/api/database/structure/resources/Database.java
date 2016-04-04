@@ -42,7 +42,6 @@ import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.IndexRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.TableRenameRequest;
-import uk.ac.ox.it.ords.api.database.structure.exceptions.BadParameterException;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
@@ -81,10 +80,9 @@ public class Database extends AbstractResource{
 	
 
 	@GET
-	@Path("{id}/{instance}")
+	@Path("{id}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getDatabaseMetadata ( 	@PathParam("id") int dbId,
-											@PathParam("instance") String instance) {
+	public Response getDatabaseMetadata ( 	@PathParam("id") int dbId) {
 		TableList tableList;
 		OrdsPhysicalDatabase physicalDatabase = null;
 		
@@ -92,7 +90,7 @@ public class Database extends AbstractResource{
 		// Try and obtain the database
 		//
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -106,7 +104,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			tableList =  databaseServiceInstance().getDatabaseTableList(dbId, instance, false);
+			tableList =  databaseServiceInstance().getDatabaseTableList(dbId, false);
 		}
 		
 		catch ( Exception e ) {
@@ -116,13 +114,12 @@ public class Database extends AbstractResource{
 		return Response.ok(tableList).build();
 	}
 
+
 	
 	@POST
-	@Path("{id}/{instance}")
+	@Path("")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response createDatabase ( @PathParam("id") int id,
-										@PathParam("instance") String instance,
-										DatabaseRequest databaseDTO){
+	public Response createDatabase (DatabaseRequest databaseDTO){
 		
 		OrdsPhysicalDatabase newDatabase;
 		if ( !SecurityUtils.getSubject().isPermitted(
@@ -130,7 +127,45 @@ public class Database extends AbstractResource{
 			return forbidden();
 		}
 		try {
-			newDatabase =  databaseServiceInstance().createNewDatabase(id, databaseDTO, instance);
+			newDatabase =  databaseServiceInstance().createNewDatabase(databaseDTO);
+		    //UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+		    //builder.path(Integer.toString(newDatabase.getPhysicalDatabaseId()));
+		    return Response.status(Response.Status.CREATED).entity(newDatabase).build();
+		}
+		catch ( Exception e ) {
+			return this.handleException(e);
+		}
+	}
+	
+	@POST
+	@Path("{id}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response cloneDatabase ( @PathParam("id") int id,
+										DatabaseRequest databaseDTO){
+		
+		OrdsPhysicalDatabase newDatabase;
+		OrdsPhysicalDatabase templateDatabase;
+		
+		try {
+			 templateDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id);
+		} catch (Exception e) {
+			return Response.status(404).build();
+		}
+		if (templateDatabase == null){
+			return Response.status(404).build();
+		}
+
+		if ( !SecurityUtils.getSubject().isPermitted(
+				DatabaseStructurePermissions.DATABASE_CREATE)) {
+			return forbidden();
+		}
+		if ( !SecurityUtils.getSubject().isPermitted(
+				DatabaseStructurePermissions.DATABASE_VIEW(templateDatabase.getLogicalDatabaseId()))) {
+			return forbidden();
+		}
+		
+		try {
+			newDatabase =  databaseServiceInstance().createNewDatabaseFromExisting(id, databaseDTO);
 		    //UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 		    //builder.path(Integer.toString(newDatabase.getPhysicalDatabaseId()));
 		    return Response.status(Response.Status.CREATED).entity(newDatabase).build();
@@ -141,33 +176,47 @@ public class Database extends AbstractResource{
 	}
 	
 	@PUT
-	@Path("{id}/{instance}")
+	@Path("{id}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response mergeDatabaseToMain ( 
 			@PathParam("id") int id,
-			@PathParam("instance") String instance ) {
+			DatabaseRequest databaseDTO
+			) {
 		
-		OrdsPhysicalDatabase physicalDatabase = null;
+		OrdsPhysicalDatabase target = null;
+		OrdsPhysicalDatabase source = null;
 		
 		//
-		// Try and obtain the database
+		// Try and obtain the target database
 		//
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id, instance);
+			target = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
 		
+		//
+		// Try and obtain the source database to merge into it
+		//
+		if (databaseDTO == null || databaseDTO.getCloneFrom() == null){
+			return Response.status(400).build();
+		}
+		try {
+			source = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData( databaseDTO.getCloneFrom());
+		} catch (Exception e1) {
+			return Response.status(404).build();
+		}
 		
 		if ( !SecurityUtils.getSubject().isPermitted(
-				DatabaseStructurePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+				DatabaseStructurePermissions.DATABASE_MODIFY(target.getLogicalDatabaseId()))) {
+			return forbidden();
+		}
+		if ( !SecurityUtils.getSubject().isPermitted(
+				DatabaseStructurePermissions.DATABASE_MODIFY(source.getLogicalDatabaseId()))) {
 			return forbidden();
 		}
 		try {
-			if ( instance.equalsIgnoreCase("MAIN")) {
-				throw new BadParameterException("Cannot replace MAIN with itself!");
-			}
-			OrdsPhysicalDatabase merged = databaseServiceInstance().mergeInstanceToMain(id, instance);
+			OrdsPhysicalDatabase merged = databaseServiceInstance().mergeInstanceToMain(source, target);
 			return Response.ok().entity(merged).build();
 		}
 		catch(Exception e ) {
@@ -178,18 +227,17 @@ public class Database extends AbstractResource{
 	
 	
 	@DELETE
-	@Path("{id}/{instance}")
+	@Path("{id}")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response dropDatabase (
-			@PathParam("id") int dbId,
-			@PathParam("instance") String instance ) {	
+			@PathParam("id") int dbId) {	
 		
 		//
 		// Try and obtain the database
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -199,7 +247,7 @@ public class Database extends AbstractResource{
 			return forbidden();		
 		}
 		try {
-			databaseServiceInstance().deleteDatabase(dbId, instance, false);
+			databaseServiceInstance().deleteDatabase(dbId, false);
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -212,17 +260,18 @@ public class Database extends AbstractResource{
 
 // staging version resource	
 	@GET
-	@Path("{id}/{instance}/staging")
+	@Path("{id}/staging")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getStagingDatabaseMetadata ( 	@PathParam("id") int dbId,
-											@PathParam("instance") String instance) throws Exception {
+	public Response getStagingDatabaseMetadata ( 	
+			@PathParam("id") int dbId
+	) throws Exception {
 		
 		//
 		// Try and obtain the database
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -230,7 +279,7 @@ public class Database extends AbstractResource{
 		//
 		// Check the staging version exists
 		//
-		if (!DatabaseStructureService.Factory.getInstance().checkDatabaseExists(dbId, instance, true)){
+		if (!DatabaseStructureService.Factory.getInstance().checkDatabaseExists(dbId, true)){
 			return Response.status(404).build();
 		}		
 
@@ -240,7 +289,7 @@ public class Database extends AbstractResource{
 			return forbidden();
 		}
 		try {
-			tableList =  databaseServiceInstance().getDatabaseTableList(dbId, instance, true);
+			tableList =  databaseServiceInstance().getDatabaseTableList(dbId, true);
 		}
 		catch ( Exception e ) {
 			return this.handleException(e);
@@ -249,11 +298,10 @@ public class Database extends AbstractResource{
 	}
 	
 	@POST
-	@Path("{id}/{instance}/staging")
+	@Path("{id}/staging")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response createStagingDatabase (
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@Context UriInfo uriInfo) {
 		
 		//
@@ -261,7 +309,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -270,9 +318,9 @@ public class Database extends AbstractResource{
 			return forbidden();		
 		}
 		try {
-			String databaseName = databaseServiceInstance().createNewStagingDatabase(dbId, instance);
+			String databaseName = databaseServiceInstance().createNewStagingDatabase(dbId);
 		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
-		    builder.path(databaseName);
+		    //builder.path(databaseName);
 		    return Response.created(builder.build()).build();
 		}
 		catch ( Exception e ) {
@@ -282,19 +330,19 @@ public class Database extends AbstractResource{
 	
 	
 	@PUT
-	@Path("{id}/{instance}/staging")
+	@Path("{id}/staging")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces( MediaType.APPLICATION_JSON )
-	public Response updateDatabaseMetadata (
-			@PathParam("id") int dbId,
-			@PathParam("instance") String instance ) {
+	public Response mergeStagingToMain (
+			@PathParam("id") int dbId
+			) {
 		
 		//
 		// Try and obtain the database
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -303,7 +351,7 @@ public class Database extends AbstractResource{
 			return forbidden();		
 		}
 		try {
-			databaseServiceInstance().mergeStagingToActual(dbId, instance);
+			databaseServiceInstance().mergeStagingToActual(dbId);
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -314,18 +362,18 @@ public class Database extends AbstractResource{
 	
 	
 	@DELETE
-	@Path("{id}/{instance}/staging")
+	@Path("{id}/staging")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response dropStaginDatabase (
-			@PathParam("id") int dbId,
-			@PathParam("instance") String instance ) throws Exception{
+			@PathParam("id") int dbId
+	) throws Exception{
 		
 		//
 		// Try and obtain the database
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -333,7 +381,7 @@ public class Database extends AbstractResource{
 		//
 		// Check the staging version exists
 		//
-		if (!DatabaseStructureService.Factory.getInstance().checkDatabaseExists(dbId, instance, true)){
+		if (!DatabaseStructureService.Factory.getInstance().checkDatabaseExists(dbId, true)){
 			return Response.status(404).build();
 		}
 		
@@ -342,7 +390,7 @@ public class Database extends AbstractResource{
 			return forbidden();		
 		}
 		try {
-			databaseServiceInstance().deleteDatabase(dbId, instance, true);
+			databaseServiceInstance().deleteDatabase(dbId, true);
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -358,7 +406,7 @@ public class Database extends AbstractResource{
 	 * TODO: This needs it's own microservice really
 	 *******************************************************/
 	@PUT
-	@Path("{id}/{instance}/positions")
+	@Path("{id}/positions")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response saveTablePositions (
@@ -372,7 +420,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -382,7 +430,7 @@ public class Database extends AbstractResource{
 			return forbidden();
 		}
 		try {
-			this.tableServiceInstance().setTablePositions(dbId, instance, request);
+			this.tableServiceInstance().setTablePositions(physicalDatabase, request);
 			return Response.ok().build();
 		}
 		catch( Exception e ) {
@@ -399,11 +447,10 @@ public class Database extends AbstractResource{
 	
 	
 	@GET
-	@Path("{id}/{instance}/table/{tablename}/{staging}")
+	@Path("{id}/table/{tablename}/{staging}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getTableMetadata ( 
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("staging") BooleanCheck staging ) {
 		
@@ -412,7 +459,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -422,7 +469,7 @@ public class Database extends AbstractResource{
 		}
 		try {
 			TableList tableList = tableServiceInstance().getTableMetadata(
-					dbId, instance, tableName, staging.getValue());
+					physicalDatabase, tableName, staging.getValue());
 			return Response.ok(tableList).build();
 		}
 		catch ( Exception e ) {
@@ -432,11 +479,10 @@ public class Database extends AbstractResource{
 	
 	
 	@POST
-	@Path("{id}/{instance}/table/{tablename}/{staging}")
+	@Path("{id}/table/{tablename}/{staging}")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response createNewTable ( 
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("staging") BooleanCheck staging,
 			@Context UriInfo uriInfo ) {
@@ -446,7 +492,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -455,7 +501,7 @@ public class Database extends AbstractResource{
 			return forbidden();
 		}
 		try {
-			tableServiceInstance().createNewTable(dbId, instance, tableName, staging.getValue());
+			tableServiceInstance().createNewTable(physicalDatabase, tableName, staging.getValue());
 		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 		    builder.path(tableName);
 		    return Response.created(builder.build()).build();
@@ -467,11 +513,10 @@ public class Database extends AbstractResource{
 	
 	
 	@PUT
-	@Path("{id}/{instance}/table/{tablename}/{staging}")
+	@Path("{id}/table/{tablename}/{staging}")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response updateTableName ( 
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("staging") BooleanCheck staging,
 			TableRenameRequest request) {
@@ -481,7 +526,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -490,7 +535,7 @@ public class Database extends AbstractResource{
 			return forbidden();
 		}
 		try {
-			tableServiceInstance().renameTable(dbId, instance, tableName, request.getNewname(), staging.getValue());
+			tableServiceInstance().renameTable(physicalDatabase, tableName, request.getNewname(), staging.getValue());
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -501,11 +546,10 @@ public class Database extends AbstractResource{
 	
 	
 	@DELETE
-	@Path("{id}/{instance}/table/{tablename}/{staging}")
+	@Path("{id}/table/{tablename}/{staging}")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response deleteTable ( 
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("staging") BooleanCheck staging ) {
 		
@@ -514,7 +558,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -524,7 +568,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			tableServiceInstance().deleteTable(dbId, instance, tableName, staging.getValue() );
+			tableServiceInstance().deleteTable(physicalDatabase, tableName, staging.getValue() );
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -539,11 +583,10 @@ public class Database extends AbstractResource{
 	 ********************************************************/
 
 	@GET
-	@Path("{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
+	@Path("{id}/table/{tablename}/column/{colname}/{staging}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getColumnMetadata (
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("colname") String columnName,
 			@PathParam("staging") BooleanCheck staging) {
@@ -553,7 +596,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -564,8 +607,7 @@ public class Database extends AbstractResource{
 		}
 		try {
 			ColumnRequest metadata = columnServiceInstance().getColumnMetadata(
-					dbId, 
-					instance, 
+					physicalDatabase, 
 					tableName, 
 					columnName,
 					staging.getValue());
@@ -580,12 +622,11 @@ public class Database extends AbstractResource{
 	}
 	
 	@POST
-	@Path("{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
+	@Path("{id}/table/{tablename}/column/{colname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response createColumn (
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("colname") String columnName,
 			@PathParam("staging") BooleanCheck staging,
@@ -597,7 +638,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -607,7 +648,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			columnServiceInstance().createColumn(dbId, instance, tableName, columnName, newColumn, staging.getValue());
+			columnServiceInstance().createColumn(physicalDatabase, tableName, columnName, newColumn, staging.getValue());
 		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 		    builder.path(tableName);
 		    return Response.created(builder.build()).build();
@@ -619,12 +660,11 @@ public class Database extends AbstractResource{
 	
 	
 	@PUT
-	@Path("{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
+	@Path("{id}/table/{tablename}/column/{colname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response updateColumn (
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("colname") String columnName,
 			@PathParam("staging") BooleanCheck staging,
@@ -635,7 +675,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -645,7 +685,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			columnServiceInstance().updateColumn(dbId, instance, tableName, columnName, newColumn, staging.getValue());
+			columnServiceInstance().updateColumn(physicalDatabase, tableName, columnName, newColumn, staging.getValue());
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -655,11 +695,10 @@ public class Database extends AbstractResource{
 	
 	
 	@DELETE
-	@Path("{id}/{instance}/table/{tablename}/column/{colname}/{staging}")
+	@Path("{id}/table/{tablename}/column/{colname}/{staging}")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response deleteColumn (
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("colname") String columnName,
 			@PathParam("staging") BooleanCheck staging ) {
@@ -669,7 +708,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -679,7 +718,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			columnServiceInstance().deleteColumn(dbId, instance, tableName, columnName, staging.getValue());
+			columnServiceInstance().deleteColumn(physicalDatabase, tableName, columnName, staging.getValue());
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -693,11 +732,10 @@ public class Database extends AbstractResource{
 	 ********************************************************/
 
 	@GET
-	@Path("{id}/{instance}/table/{tablename}/comment/{staging}")
+	@Path("{id}/table/{tablename}/comment/{staging}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getTableComment ( 
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("staging") BooleanCheck staging ) {
 		
@@ -706,7 +744,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -718,7 +756,7 @@ public class Database extends AbstractResource{
 		try {
 			CommentRequest comment = new CommentRequest();
 			comment.setComment(
-					commentServiceInstance().getTableComment(dbId, instance, tableName, staging.getValue()));
+					commentServiceInstance().getTableComment(physicalDatabase, tableName, staging.getValue()));
 			return Response.ok(comment).build();
 		}
 		catch ( Exception e ) {
@@ -729,12 +767,11 @@ public class Database extends AbstractResource{
 	
 	@POST
 	@PUT
-	@Path("{id}/{instance}/table/{tablename}/comment/{staging}")
+	@Path("{id}/table/{tablename}/comment/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response setTableComment (
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("staging") BooleanCheck staging,
 			CommentRequest newComment,
@@ -745,7 +782,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -755,7 +792,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			commentServiceInstance().setTableComment(dbId, instance, tableName, newComment.getComment(), staging.getValue());
+			commentServiceInstance().setTableComment(physicalDatabase, tableName, newComment.getComment(), staging.getValue());
 		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 		    builder.path(tableName);
 		    return Response.created(builder.build()).build();
@@ -767,11 +804,10 @@ public class Database extends AbstractResource{
 	
 	
 	@GET
-	@Path("{id}/{instance}/table/{tablename}/column/{columnName}/comment/{staging}")
+	@Path("{id}/table/{tablename}/column/{columnName}/comment/{staging}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getColumnComment ( 
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("columnName") String columnName,
 			@PathParam("staging") BooleanCheck staging ) {
@@ -781,7 +817,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -793,7 +829,7 @@ public class Database extends AbstractResource{
 		try {
 			CommentRequest comment = new CommentRequest();
 			comment.setComment(
-					commentServiceInstance().getColumnComment(dbId, instance, tableName, columnName, staging.getValue()));
+					commentServiceInstance().getColumnComment(physicalDatabase, tableName, columnName, staging.getValue()));
 			return Response.ok(comment).build();
 		}
 		catch ( Exception e ) {
@@ -804,12 +840,11 @@ public class Database extends AbstractResource{
 	
 	@POST
 	@PUT
-	@Path("{id}/{instance}/table/{tablename}/column/{columnName}/comment/{staging}")
+	@Path("{id}/table/{tablename}/column/{columnName}/comment/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response setColumnComment (
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("columnName") String columnName,
 			@PathParam("staging") BooleanCheck staging, 
@@ -821,7 +856,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -832,8 +867,7 @@ public class Database extends AbstractResource{
 		
 		try {
 			commentServiceInstance().setColumnComment(
-					dbId,
-					instance,
+					physicalDatabase,
 					tableName,
 					columnName,
 					newComment.getComment(), 
@@ -853,11 +887,10 @@ public class Database extends AbstractResource{
 	 ********************************************************/
 
 	@GET
-	@Path("{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
+	@Path("{id}/table/{tablename}/constraint/{conname}/{staging}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getTableConstraint ( 
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("conname") String constraintName,
 			@PathParam("staging") BooleanCheck staging ) {
@@ -867,8 +900,8 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
-		} catch (Exception e1) {
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
+		} catch (Exception e) {
 			return Response.status(404).build();
 		}
 		
@@ -878,8 +911,7 @@ public class Database extends AbstractResource{
 		
 		try {
 			MessageEntity e = constraintServiceInstance().getConstraint(
-					dbId, 
-					instance, 
+					physicalDatabase,
 					tableName, 
 					constraintName,
 					staging.getValue()
@@ -887,18 +919,18 @@ public class Database extends AbstractResource{
 			return Response.ok(e).build();
 		}
 		catch ( Exception e ) {
+			e.printStackTrace();
 			return this.handleException(e);
 		}
 	}
 	
 	
 	@POST
-	@Path("{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
+	@Path("{id}/table/{tablename}/constraint/{conname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response createTableConstraint ( 
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("conname") String constraintName,
 			@PathParam("staging") BooleanCheck staging,
@@ -910,7 +942,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -920,7 +952,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			constraintServiceInstance().createConstraint(dbId, instance, tableName, constraintName, constraint,
+			constraintServiceInstance().createConstraint(physicalDatabase, tableName, constraintName, constraint,
 					staging.getValue());
 		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 		    builder.path(constraintName);
@@ -933,7 +965,7 @@ public class Database extends AbstractResource{
 	
 	
 	@PUT
-	@Path("{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
+	@Path("{id}/table/{tablename}/constraint/{conname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response updateTableConstraint ( 
@@ -948,7 +980,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -958,7 +990,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			constraintServiceInstance().updateConstraint(dbId, instance, tableName,constraintName, constraint,
+			constraintServiceInstance().updateConstraint(physicalDatabase, tableName,constraintName, constraint,
 					staging.getValue());
 			return Response.ok().build();
 		}
@@ -969,7 +1001,7 @@ public class Database extends AbstractResource{
 	
 	
 	@DELETE
-	@Path("/{id}/{instance}/table/{tablename}/constraint/{conname}/{staging}")
+	@Path("/{id}/table/{tablename}/constraint/{conname}/{staging}")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response deleteTableConstraint ( 
 			@PathParam("id") int dbId,
@@ -983,7 +1015,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -993,7 +1025,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			constraintServiceInstance().deleteConstraint(dbId, instance, tableName, constraintName,
+			constraintServiceInstance().deleteConstraint(physicalDatabase, tableName, constraintName,
 					staging.getValue());
 			return Response.ok().build();
 		}
@@ -1009,7 +1041,7 @@ public class Database extends AbstractResource{
 	 ********************************************************/
 	
 	@GET
-	@Path("{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
+	@Path("{id}/table/{tablename}/index/{indexname}/{staging}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getNamedIndex (  
 			@PathParam("id") int dbId,
@@ -1023,7 +1055,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -1033,7 +1065,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			MessageEntity index = indexServiceInstance().getIndex(dbId, instance, tableName, indexName,
+			MessageEntity index = indexServiceInstance().getIndex(physicalDatabase, tableName, indexName,
 					staging.getValue());
 			return Response.ok(index).build();
 		}
@@ -1044,12 +1076,11 @@ public class Database extends AbstractResource{
 	
 	
 	@POST
-	@Path("{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
+	@Path("{id}/table/{tablename}/index/{indexname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response createIndex (  
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("indexname") String indexName,
 			@PathParam("staging") BooleanCheck staging,
@@ -1061,7 +1092,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -1071,7 +1102,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			indexServiceInstance().createIndex(dbId, instance, tableName, indexName, newIndex,
+			indexServiceInstance().createIndex(physicalDatabase, tableName, indexName, newIndex,
 					staging.getValue());
 		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 		    builder.path(indexName);
@@ -1083,12 +1114,11 @@ public class Database extends AbstractResource{
 	}
 	
 	@PUT
-	@Path("{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
+	@Path("{id}/table/{tablename}/index/{indexname}/{staging}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response updateIndex (  
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("indexname") String indexName,
 			@PathParam("staging") BooleanCheck staging,
@@ -1098,7 +1128,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -1108,7 +1138,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			indexServiceInstance().updateIndex(dbId, instance, tableName, indexName, newIndex,
+			indexServiceInstance().updateIndex(physicalDatabase, tableName, indexName, newIndex,
 					staging.getValue());
 			return Response.ok().build();
 		}
@@ -1119,11 +1149,10 @@ public class Database extends AbstractResource{
 	
 	
 	@DELETE
-	@Path("{id}/{instance}/table/{tablename}/index/{indexname}/{staging}")
+	@Path("{id}/table/{tablename}/index/{indexname}/{staging}")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response deleteIndex (  
 			@PathParam("id") int dbId,
-			@PathParam("instance") String instance,
 			@PathParam("tablename") String tableName,
 			@PathParam("indexname") String indexName,
 			@PathParam("staging") BooleanCheck staging) {
@@ -1133,7 +1162,7 @@ public class Database extends AbstractResource{
 		//
 		OrdsPhysicalDatabase physicalDatabase = null;
 		try {
-			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId, instance);
+			physicalDatabase = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(dbId);
 		} catch (Exception e1) {
 			return Response.status(404).build();
 		}
@@ -1143,7 +1172,7 @@ public class Database extends AbstractResource{
 		}
 		
 		try {
-			indexServiceInstance().deleteIndex(dbId, instance, tableName, indexName,
+			indexServiceInstance().deleteIndex(physicalDatabase, tableName, indexName,
 					staging.getValue());
 			return Response.ok().build();
 		}

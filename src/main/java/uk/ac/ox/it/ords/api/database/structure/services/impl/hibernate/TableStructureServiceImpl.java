@@ -39,11 +39,10 @@ import uk.ac.ox.it.ords.api.database.structure.services.TableStructureService;
 public class TableStructureServiceImpl extends StructureServiceImpl implements TableStructureService {
 
 	@Override
-	public TableList getTableMetadata(int dbId, String instance,
+	public TableList getTableMetadata(OrdsPhysicalDatabase database,
 			String tableName, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -60,11 +59,10 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	}
 
 	@Override
-	public void createNewTable(int dbId, String instance, String tableName, boolean staging)
+	public void createNewTable(OrdsPhysicalDatabase database, String tableName, boolean staging)
 			throws Exception {
  		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -80,11 +78,10 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	}
 
 	@Override
-	public void renameTable(int dbId, String instance, String tableName,
+	public void renameTable(OrdsPhysicalDatabase database, String tableName,
 			String tableNewName, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -114,11 +111,10 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	}
 
 	@Override
-	public void deleteTable(int dbId, String instance, String tableName, boolean staging)
+	public void deleteTable(OrdsPhysicalDatabase database, String tableName, boolean staging)
 			throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -133,7 +129,7 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	
 
 	@Override
-	public void setTablePositions(int dbId, String instance,
+	public void setTablePositions(OrdsPhysicalDatabase database,
 			PositionRequest positionRequest) throws Exception {
         List<String> tableNames = new ArrayList<String>();
         // Create or update tables from the schema designer
@@ -141,10 +137,10 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
             // If there's no saved position for the table, create one.
             // otherwise, update the existing one.
             tableNames.add(tablePosition.getTablename());
-            SchemaDesignerTable table = this.getTablePositionRecord(dbId, tablePosition.getTablename());
+            SchemaDesignerTable table = this.getTablePositionRecord(database.getPhysicalDatabaseId(), tablePosition.getTablename());
             if (table == null) {
                 table = new SchemaDesignerTable();
-                table.setDatabaseId(dbId);
+                table.setDatabaseId(database.getPhysicalDatabaseId());
                 table.setTableName(tablePosition.getTablename());
                 table.setX(tablePosition.getX());
                 table.setY(tablePosition.getY());
@@ -156,7 +152,7 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
             }
         }
         // Remove any data for tables no longer in the schema
-        List<SchemaDesignerTable> savedTables = this.getTablePositionRecordsForDatabase(dbId);
+        List<SchemaDesignerTable> savedTables = this.getTablePositionRecordsForDatabase(database.getPhysicalDatabaseId());
         for (SchemaDesignerTable savedTable : savedTables) {
             if (!tableNames.contains(savedTable.getTableName())) {
                 this.removeModelObject(savedTable);

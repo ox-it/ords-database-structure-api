@@ -39,7 +39,6 @@ import org.hibernate.criterion.Restrictions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.ColumnRequest;
@@ -112,7 +111,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
+		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
 		assertNotNull(db);
@@ -123,13 +122,13 @@ public class OdbcTest extends AbstractDatabaseTest {
 		dbID = db.getPhysicalDatabaseId();
 		
 		// Create a table
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
+		response = getClient().path("/"+dbID+"/table/testTable/false").post(null);
 		assertEquals(201, response.getStatus());
 		
 		// build a column
 		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
 		// Create a column
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
+		response = getClient().path("/"+dbID+"/table/testTable/column/testColumn/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
 		logout();
@@ -143,7 +142,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 
-		Response deleteResponse = getClient().path("/"+dbID+"/MAIN").delete();
+		Response deleteResponse = getClient().path("/"+dbID+"/").delete();
 		assertEquals(200, deleteResponse.getStatus());
 		
 		logout();
@@ -152,28 +151,28 @@ public class OdbcTest extends AbstractDatabaseTest {
 	
 	@Test 
 	public void createOdbcRoleUnauth() throws Exception{
-		Response odbcResponse = getClient().path("/99/MAIN/odbc/").post(null);
+		Response odbcResponse = getClient().path("/99/odbc/").post(null);
 		assertEquals(401, odbcResponse.getStatus());
 	}
 	
 	@Test 
 	public void createOdbcRoleNoDb() throws Exception{
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		Response odbcResponse = getClient().path("/99/MAIN/odbc/").post(null);
+		Response odbcResponse = getClient().path("/99/odbc/").post(null);
 		assertEquals(404, odbcResponse.getStatus());
 		logout();
 	}
 	
 	@Test 
 	public void revokeOdbcRoleUnauth() throws Exception{
-		Response odbcResponse = getClient().path("/99/MAIN/odbc/pingu").delete();
+		Response odbcResponse = getClient().path("/99/odbc/pingu").delete();
 		assertEquals(401, odbcResponse.getStatus());
 	}
 	
 	@Test 
 	public void revokeOdbcRoleNoDb() throws Exception{
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		Response odbcResponse = getClient().path("/99/MAIN/odbc/pingu").delete();
+		Response odbcResponse = getClient().path("/99/odbc/pingu").delete();
 		assertEquals(404, odbcResponse.getStatus());
 		logout();
 	}
@@ -191,7 +190,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		loginUsingSSO("pinga@penguins.com","");
 
-		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
+		Response odbcResponse = getClient().path("/"+dbID+"/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		OdbcResponse output = odbcResponse.readEntity(OdbcResponse.class);
 		String password = output.getPassword();
@@ -220,7 +219,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		logout();
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/"+username).delete();
+		odbcResponse = getClient().path("/"+dbID+"/odbc/"+username).delete();
 		assertEquals(200, odbcResponse.getStatus());
 		
 		//
@@ -249,7 +248,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		loginUsingSSO("pinga@penguins.com","");
 
-		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
+		Response odbcResponse = getClient().path("/"+dbID+"/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		OdbcResponse output = odbcResponse.readEntity(OdbcResponse.class);
 		String password = output.getPassword();
@@ -276,13 +275,13 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		// Now drop pinga - this should fail as pinga doesn't have the rights
 		//
-		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/"+username).delete();
+		odbcResponse = getClient().path("/"+dbID+"/odbc/"+username).delete();
 		assertEquals(403, odbcResponse.getStatus());
 		
 		logout();
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		
-		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/"+username).delete();
+		odbcResponse = getClient().path("/"+dbID+"/odbc/"+username).delete();
 		assertEquals(200, odbcResponse.getStatus());
 		
 		//
@@ -322,7 +321,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId2, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
+		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		OrdsPhysicalDatabase db2 = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
 		assertNotNull(db2);
@@ -331,10 +330,10 @@ public class OdbcTest extends AbstractDatabaseTest {
 		// Add a table
 		//
 		int dbID2 = db2.getPhysicalDatabaseId();
-		response = getClient().path("/"+dbID2+"/MAIN/table/testTable/false").post(null);
+		response = getClient().path("/"+dbID2+"/table/testTable/false").post(null);
 		assertEquals(201, response.getStatus());
 		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
-		response = getClient().path("/"+dbID2+"/MAIN/table/testTable/column/testColumn/false").post(column1);
+		response = getClient().path("/"+dbID2+"/table/testTable/column/testColumn/false").post(column1);
 		assertEquals(201, response.getStatus());
 		logout();
 		
@@ -348,7 +347,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		loginUsingSSO("pinga@penguins.com","");
 
-		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
+		Response odbcResponse = getClient().path("/"+dbID+"/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		OdbcResponse output = odbcResponse.readEntity(OdbcResponse.class);
 		String password = output.getPassword();
@@ -374,14 +373,14 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		// As we don't have an ORDS role for Pinga in Db2, we shouldn't be able to request an ODBC role
 		//
-		odbcResponse = getClient().path("/"+dbID2+"/MAIN/odbc/").post(null);
+		odbcResponse = getClient().path("/"+dbID2+"/odbc/").post(null);
 		assertEquals(403, odbcResponse.getStatus());
 		
 		//
 		// Now drop the DBs
 		//
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		Response deleteResponse = getClient().path("/"+dbID2+"/MAIN").delete();
+		Response deleteResponse = getClient().path("/"+dbID2+"").delete();
 		assertEquals(200, deleteResponse.getStatus());
 		logout();
 	}
@@ -399,7 +398,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		loginUsingSSO("pinga@penguins.com","");
 
-		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
+		Response odbcResponse = getClient().path("/"+dbID+"/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		OdbcResponse output = odbcResponse.readEntity(OdbcResponse.class);
 		String password = output.getPassword();
@@ -424,7 +423,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		// Now drop pinga
 		//
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/"+username).delete();
+		odbcResponse = getClient().path("/"+dbID+"/odbc/"+username).delete();
 		assertEquals(200, odbcResponse.getStatus());
 		
 		//
@@ -464,13 +463,13 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		loginUsingSSO("pinga@penguins.com","");
 
-		Response odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
+		Response odbcResponse = getClient().path("/"+dbID+"/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		OdbcResponse output = odbcResponse.readEntity(OdbcResponse.class);
 		String password = output.getPassword();
 		String username = output.getUsername();
 		
-		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/").post(null);
+		odbcResponse = getClient().path("/"+dbID+"/odbc/").post(null);
 		assertEquals(200, odbcResponse.getStatus());
 		output = odbcResponse.readEntity(OdbcResponse.class);
 		String newPassword = output.getPassword();
@@ -509,7 +508,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		logout();
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		odbcResponse = getClient().path("/"+dbID+"/MAIN/odbc/"+username).delete();
+		odbcResponse = getClient().path("/"+dbID+"/odbc/"+username).delete();
 		assertEquals(200, odbcResponse.getStatus());
 		
 		//

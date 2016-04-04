@@ -17,9 +17,6 @@
 
 package uk.ac.ox.it.ords.api.database.structure.dto;
 
-import java.util.ArrayList;
-
-
 public class ConstraintRequest {
     /**
      * The new name of the constraint, if it is being editied
@@ -47,7 +44,7 @@ public class ConstraintRequest {
      * Can be more than one column for a Unique or Primary Key constraint,
      * but only one for a Foreign Key,
      */
-    private ArrayList<String> columns;
+    private String[] columns;
 
     /**
      * The table that is checked for referential integrity, if this is a 
@@ -103,23 +100,13 @@ public class ConstraintRequest {
         this.foreign = isForeign;
     }
 
-    public ArrayList<String> getColumns() {
+    public String[] getColumns() {
         return columns;
     }
 
-    public void setColumns(ArrayList<String> columns) {
+    public void setColumns(String[] columns) {
         this.columns = columns;
     }
-
-    public void setColumn(String column) {
-        columns = new ArrayList<String>();
-        columns.add(column);
-    }
-
-    public String getColumn() {
-        return columns.get(0);
-    }
-    
 
     public String getReftable() {
         return reftable;

@@ -83,14 +83,4 @@ public class SqlDesignerTranslations {
 
 		return output;
 	}
-
-
-
-
-
-
-	public static void main(String[] args) {
-		System.out.println(translateDatatype("Wibble", ""));
-		System.out.println(translateDatatype("CHARACTER VARYING", ""));
-	}
 }

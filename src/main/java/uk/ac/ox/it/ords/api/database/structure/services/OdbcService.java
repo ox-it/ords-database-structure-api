@@ -40,7 +40,7 @@ public interface OdbcService {
 	public abstract void removeOdbcUserFromDatabase(String role, OrdsPhysicalDatabase database, String databaseName)  throws Exception;
 
 	public abstract String getODBCUserName(String databaseName) throws Exception;
-	
+		
 	/**
 	 * Factory for obtaining implementations
 	 */

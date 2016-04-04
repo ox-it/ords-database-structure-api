@@ -19,6 +19,7 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 import java.util.ServiceLoader;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.ColumnRequest;
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.ColumnStructureServiceImpl;
 
 public interface ColumnStructureService {
@@ -33,7 +34,7 @@ public interface ColumnStructureService {
 	 * @return
 	 * @throws Exception
 	 */
-	public ColumnRequest getColumnMetadata(int dbId, String instance,
+	public ColumnRequest getColumnMetadata(OrdsPhysicalDatabase database,
 			String tableName, String columnName, boolean staging)
 			throws Exception;
 
@@ -46,7 +47,7 @@ public interface ColumnStructureService {
 	 * @param column
 	 * @throws Exception
 	 */
-	public void createColumn(int dbId, String instance, String tableName,
+	public void createColumn(OrdsPhysicalDatabase database, String tableName,
 			String columnName, ColumnRequest column, boolean staging) throws Exception;
 
 	/**
@@ -59,7 +60,7 @@ public interface ColumnStructureService {
 	 * @param column
 	 * @throws Exception
 	 */
-	public void updateColumn(int dbId, String intance, String tableName,
+	public void updateColumn(OrdsPhysicalDatabase database, String tableName,
 			String columnName, ColumnRequest column, boolean staging) throws Exception;
 
 	/**
@@ -71,7 +72,7 @@ public interface ColumnStructureService {
 	 * @param column
 	 * @throws Exception
 	 */
-	public void deleteColumn(int dbId, String instance, String tableName,
+	public void deleteColumn(OrdsPhysicalDatabase database, String tableName,
 			String columnName, boolean staging) throws Exception;
 
 	/**

@@ -19,6 +19,7 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 import java.util.ServiceLoader;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.TableStructureServiceImpl;
 
 public interface TableStructureService {
@@ -31,7 +32,7 @@ public interface TableStructureService {
 	 * @return
 	 * @throws Exception
 	 */
-	public TableList getTableMetadata ( int dbID, String instance, String tableName, boolean stagin ) throws Exception;
+	public TableList getTableMetadata ( OrdsPhysicalDatabase database, String tableName, boolean stagin ) throws Exception;
 	
 	/**
 	 * 
@@ -40,7 +41,7 @@ public interface TableStructureService {
 	 * @param tableName
 	 * @throws Exception
 	 */
-	public void createNewTable ( int dbID, String instance, String tableName, boolean staging ) throws Exception;
+	public void createNewTable ( OrdsPhysicalDatabase database, String tableName, boolean staging ) throws Exception;
 	
 	/**
 	 * 
@@ -50,7 +51,7 @@ public interface TableStructureService {
 	 * @param tableNewName
 	 * @throws Exception
 	 */
-	public void renameTable ( int dbID, String instance, String tableName, String tableNewName, boolean staging ) throws Exception;
+	public void renameTable ( OrdsPhysicalDatabase database, String tableName, String tableNewName, boolean staging ) throws Exception;
 	
 	
 	/**
@@ -59,7 +60,7 @@ public interface TableStructureService {
 	 * @param instance
 	 * @param positionRequest
 	 */
-	public void setTablePositions ( int dbID, String instance, PositionRequest positionRequest ) throws Exception;
+	public void setTablePositions ( OrdsPhysicalDatabase database, PositionRequest positionRequest ) throws Exception;
 	
 	/**
 	 * 
@@ -68,7 +69,7 @@ public interface TableStructureService {
 	 * @param tableName
 	 * @throws Exception
 	 */
-	public void deleteTable ( int dbID, String instance, String tableName, boolean staging ) throws Exception;
+	public void deleteTable ( OrdsPhysicalDatabase database, String tableName, boolean staging ) throws Exception;
 
 	/**
 	 * Factory for obtaining implementations

@@ -16,8 +16,7 @@
 
 package uk.ac.ox.it.ords.api.database.structure.resources;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 import javax.ws.rs.core.Response;
 
@@ -25,98 +24,84 @@ import org.junit.Test;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
+import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
 
+public class InstancesTest extends AbstractDatabaseTestRunner{
 
-public class StagingTest extends AbstractDatabaseTestRunner {
-	
 	@Test
-	public void createStagingDatabase(){
-		
+	public void createTestVersion() throws Exception{
+
 		// Create a database
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
-		
+
 		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
 		assertNotNull(db);
 		
-		// Strip the id from the end of the path
 		int physicalDatabaseId = db.getPhysicalDatabaseId();
 		
-		// Now make a staging version
-		response = getClient().path("/"+physicalDatabaseId+"/staging").post(dbr);
+		// Now make a TEST version
+		dbr.setInstance("TEST");
+		response = getClient().path("/"+physicalDatabaseId+"/").post(dbr);
 		assertEquals(201, response.getStatus());
-
-		// Check it exists
-		response = getClient().path("/"+physicalDatabaseId+"/staging").get();
+		db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		
+		// Check the TEST version exists
+		response = getClient().path("/"+db.getPhysicalDatabaseId()+"/").get();
+		assertEquals(200, response.getStatus());
+		boolean exists = DatabaseStructureService.Factory.getInstance().checkDatabaseExists(db.getPhysicalDatabaseId(), false);
+		assertTrue(exists);
+		
+		// Drop test
+		response = getClient().path("/"+db.getPhysicalDatabaseId()+"/").delete();
 		assertEquals(200, response.getStatus());
 		
-		// Drop staging
-		response = getClient().path("/"+physicalDatabaseId+"/staging").delete();
-		assertEquals(200, response.getStatus());
-
-		// Check it was dropped
-		response = getClient().path("/"+physicalDatabaseId+"/staging").get();
-		assertEquals(404, response.getStatus());
-
 		// Drop main
 		response = getClient().path("/"+physicalDatabaseId+"/").delete();
 		assertEquals(200, response.getStatus());
-		AbstractResourceTest.databaseIds.remove(logicalDatabaseId);
-		
 	}
-	
+
 	@Test
-	public void dropStagingNonexistant(){
-		Response response = getClient().path("/999999/staging").delete();
-		assertEquals(404, response.getStatus());
-	}
-	@Test
-	public void getStagingNonexistant(){
-		Response response = getClient().path("/999999/staging").get();
-		assertEquals(404, response.getStatus());
-	}
-	@Test
-	public void createStagingNonexistant(){
-		Response response = getClient().path("/999999/staging").post(null);
-		assertEquals(404, response.getStatus());
-	}
-	
-	@Test
-	public void mergeStaging(){
+	public void mergeTestIntoMain() throws Exception{
+
 		// Create a database
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
-		
+
 		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
 		assertNotNull(db);
 		
-		// Strip the id from the end of the path
 		int physicalDatabaseId = db.getPhysicalDatabaseId();
-
-		// Now make a staging version
-		response = getClient().path("/"+physicalDatabaseId+"/staging").post(dbr);
+		
+		// Now make a TEST version
+		dbr.setInstance("TEST");
+		response = getClient().path("/"+physicalDatabaseId+"/").post(dbr);
 		assertEquals(201, response.getStatus());
+		db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
 		
-		// Get its ID
-		String path = response.getLocation().getPath();
-		String stagingId = path.split("/")[1];
-
-		// Check it exists
-		response = getClient().path("/"+stagingId+"/staging").get();
+		// Check the TEST version exists
+		response = getClient().path("/"+db.getPhysicalDatabaseId()+"/").get();
+		assertEquals(200, response.getStatus());
+		boolean exists = DatabaseStructureService.Factory.getInstance().checkDatabaseExists(db.getPhysicalDatabaseId(), false);
+		assertTrue(exists);
+		
+		// Merge test into main
+		dbr.setCloneFrom(db.getPhysicalDatabaseId());
+		response = getClient().path("/"+physicalDatabaseId+"/").put(dbr);
 		assertEquals(200, response.getStatus());
 		
-		// Merge staging into main
-		response = getClient().path("/"+stagingId+"/staging").put(null);
-		assertEquals(200, response.getStatus());
-
+		//
+		// We should now have no test instance
+		//
+		response = getClient().path("/"+db.getPhysicalDatabaseId()+"/").get();
+		assertEquals(404, response.getStatus());
+		
 		// Drop main
 		response = getClient().path("/"+physicalDatabaseId+"/").delete();
 		assertEquals(200, response.getStatus());
 	}
-
-
 }

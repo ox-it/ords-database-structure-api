@@ -41,7 +41,7 @@ public class AbstractDatabaseTest extends AbstractResourceTest{
 	protected ConstraintRequest buildConstraintRequest( 
 			String name, 
 			constraint_type type, 
-			ArrayList<String> columnNames, 
+			String[] columnNames, 
 			String refTable, 
 			String refColumn) {
 		ConstraintRequest cr = new ConstraintRequest();

@@ -96,68 +96,6 @@ public class StructureServiceImpl extends AbstractStructureService {
 
 	}
 
-	protected OrdsPhysicalDatabase getPhysicalDatabaseFromIDInstance(int dbId,
-			String instance) {
-		// EntityType dbType = OrdsPhysicalDatabase.EntityType.valueOf(instance
-		// .toUpperCase());
-		// OrdsPhysicalDatabase database = this
-		// .getPhysicalDatabaseByLogicalDatabaseId(dbId, dbType);
-		Session session = this.getOrdsDBSessionFactory().openSession();
-		try {
-			Transaction transaction = session.beginTransaction();
-
-			@SuppressWarnings("unchecked")
-			List<OrdsPhysicalDatabase> users = (List<OrdsPhysicalDatabase>) session
-					.createCriteria(OrdsPhysicalDatabase.class)
-					.add(Restrictions.eq("physicalDatabaseId", dbId)).list();
-			transaction.commit();
-			if (users.size() == 1) {
-				return users.get(0);
-			}
-			return null;
-		} catch (Exception e) {
-			session.getTransaction().rollback();
-			throw e;
-		} finally {
-			session.close();
-		}
-	}
-	
-	
-	@SuppressWarnings("unchecked")
-	protected OrdsPhysicalDatabase getDBOnCriteria ( String key, Object value ) throws Exception {
-		Session session = this.getOrdsDBSessionFactory().openSession();
-		try {
-			Transaction transaction = session.beginTransaction();
-			List<OrdsPhysicalDatabase> users = (List<OrdsPhysicalDatabase>) session
-					.createCriteria(OrdsPhysicalDatabase.class)
-					.add(Restrictions.eq(key, value)).list();
-			transaction.commit();
-			if (users.size() == 1) {
-				return users.get(0);
-			}
-			return null;
-		} catch (Exception e) {
-			session.getTransaction().rollback();
-			throw e;
-		} finally {
-			session.close();
-		}
-	}
-	
-	
-
-	public String dbNameFromIDInstance(int dbID, String instance,
-			boolean staging) {
-		OrdsPhysicalDatabase database = getPhysicalDatabaseFromIDInstance(dbID,
-				instance);
-		if (!staging) {
-			return database.getDbConsumedName();
-		} else {
-			return this.calculateStagingName(database.getDbConsumedName());
-		}
-	}
-
 	/**
 	 * Returns the odbc username for the currently signed in user
 	 * 
@@ -203,11 +141,6 @@ public class StructureServiceImpl extends AbstractStructureService {
 	public String getORDSDatabaseHost()  throws ConfigurationException {
 		return MetaConfiguration.getConfiguration().getString(
 				StructureServiceImpl.ORDS_DATABASE_HOST);
-	}
-
-	public String getDatabaseServer( int dbId, String instance ) throws Exception {
-		OrdsPhysicalDatabase pdb = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
-		return pdb.getDatabaseServer();
 	}
 
 	public boolean checkDatabaseExists(String databaseName) throws Exception {
@@ -554,12 +487,6 @@ public class StructureServiceImpl extends AbstractStructureService {
 				}
 			}
 
-			if (log.isDebugEnabled()) {
-				log.debug("Name: " + columnName);
-				log.debug("datatype: " + column.get("data_type"));
-				log.debug("default value:" + defaultValue);
-			}
-
 			// Format the field size appropriately for the data type
 			String fieldSize = getFieldSize(column);
 
@@ -571,10 +498,6 @@ public class StructureServiceImpl extends AbstractStructureService {
 			// Add the column to the response
 			response.addColumn(tableName, columnName, position, defaultValue,
 					nullable, dataType, autoIncrement == 1, columnComment);
-
-			if (log.isDebugEnabled()) {
-				log.debug(column.toString());
-			}
 		}
 
 		// Use each foreign key to add table relationships to the

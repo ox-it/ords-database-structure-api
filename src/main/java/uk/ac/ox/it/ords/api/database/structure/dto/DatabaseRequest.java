@@ -20,6 +20,12 @@ public class DatabaseRequest {
 	private String databaseName;
 	private String databaseServer;
 	private int groupId;
+	
+	// The source database to clone from. Used with PUT to merge a instance into MAIN
+	private Integer cloneFrom;
+	
+	// The instance required, e.g. MAIN, TEST. Used with POSTs
+	private String instance;
 
 	public String getDatabaseName() {
 		return databaseName;
@@ -38,5 +44,17 @@ public class DatabaseRequest {
 	}
 	public void setGroupId(int groupId) {
 		this.groupId = groupId;
+	}
+	public Integer getCloneFrom() {
+		return cloneFrom;
+	}
+	public void setCloneFrom(Integer cloneFrom) {
+		this.cloneFrom = cloneFrom;
+	}
+	public String getInstance() {
+		return instance;
+	}
+	public void setInstance(String instance) {
+		this.instance = instance;
 	}
 }

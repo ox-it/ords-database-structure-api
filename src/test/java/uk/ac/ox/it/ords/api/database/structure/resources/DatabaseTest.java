@@ -64,7 +64,6 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		PermissionsService.Factory.getInstance().createPermission(permission);
 		transaction.commit();
 		
-		System.out.println(SecurityUtils.getSubject().hasRole("databaseowner_9"));
 		assertTrue(SecurityUtils.getSubject().isPermitted("database:view:9"));
 		assertTrue(SecurityUtils.getSubject().isPermitted("database:view:9:43"));
 		assertTrue(SecurityUtils.getSubject().isPermitted("database:view:9:41"));
@@ -83,7 +82,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 	public void createAndDeleteDatabase() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
+		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
 		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
@@ -94,7 +93,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		// Strip the id from the end of the path
 		int dbID = db.getPhysicalDatabaseId();
 		
-		response = getClient().path("/"+dbID+"/MAIN").delete();
+		response = getClient().path("/"+dbID).delete();
 		assertEquals(200, response.getStatus());
 		AbstractResourceTest.databaseIds.remove(dbId);
 		
@@ -106,7 +105,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 	public void stagingTest() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
+		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
 		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
@@ -117,15 +116,15 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		int dbID = db.getPhysicalDatabaseId();
 		
 		// create a staging version
-		response = getClient().path("/"+dbID+"/MAIN/staging").post(null);
+		response = getClient().path("/"+dbID+"/staging").post(null);
 		assertEquals(201, response.getStatus());
 		
 		// merge it down to actual
-		response = getClient().path("/"+dbID+"/MAIN/staging").put(null);
+		response = getClient().path("/"+dbID+"/staging").put(null);
 		assertEquals(200, response.getStatus());
 		
 		// delete the original
-		response = getClient().path("/"+dbID+"/MAIN").delete();
+		response = getClient().path("/"+dbID).delete();
 		assertEquals(200, response.getStatus());
 		
 		logout();
@@ -135,7 +134,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 	public void testTables() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
+		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
 		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
@@ -147,27 +146,27 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		// do stuff
 		
 		// Create a table
-		response = getClient().path("/"+dbID+"/MAIN/table/dummy/false").post(null);
+		response = getClient().path("/"+dbID+"/table/dummy/false").post(null);
 		assertEquals(201, response.getStatus());
 		
 		// rename the table
 		TableRenameRequest tnr = new TableRenameRequest();
 		tnr.setNewname("clever");
 		
-		response = getClient().path("/"+dbID+"/MAIN/table/dummy/false").put(tnr);
+		response = getClient().path("/"+dbID+"/table/dummy/false").put(tnr);
 		assertEquals(200, response.getStatus());
 		
 		// get the renamed table
-		response = getClient().path("/"+dbID+"/MAIN/table/clever/false").get();
+		response = getClient().path("/"+dbID+"/table/clever/false").get();
 		assertEquals(200, response.getStatus());
 		
 		// delete the table
-		response = getClient().path("/"+dbID+"/MAIN/table/clever/false").delete();
+		response = getClient().path("/"+dbID+"/table/clever/false").delete();
 		assertEquals(200, response.getStatus());
 		
 		
 		// delete the original
-		response = getClient().path("/"+dbID+"/MAIN").delete();
+		response = getClient().path("/"+dbID).delete();
 		assertEquals(200, response.getStatus());
 		
 		logout();		
@@ -179,7 +178,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
+		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
 		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
@@ -189,36 +188,35 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		int dbID = db.getPhysicalDatabaseId();
 		
 		// Create a table
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/false").post(null);
+		response = getClient().path("/"+dbID+"/table/testTable/false").post(null);
 		assertEquals(201, response.getStatus());
 		
 		// build a column
 		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
 		// Create a column
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/false").post(column1);
+		response = getClient().path("/"+dbID+"/table/testTable/column/testColumn/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
 		// build another column as auto inc
 		ColumnRequest column2 = this.buildColumnRequest("id", "int", null, false, true);
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/id/false").post(column2);
+		response = getClient().path("/"+dbID+"/table/testTable/column/id/false").post(column2);
 		assertEquals(201, response.getStatus());
 		
 		// create it as primary key
-		ArrayList<String> columnNames = new ArrayList<String>();
-		columnNames.add("id");
+		String[] columnNames = {"id"};
 		ConstraintRequest pkey_contstraint = this.buildConstraintRequest("pkey_testTable", constraint_type.PRIMARY, columnNames, "", "");
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/constraint/pkey_testTable/false").post(pkey_contstraint);
+		response = getClient().path("/"+dbID+"/table/testTable/constraint/pkey_testTable/false").post(pkey_contstraint);
 		assertEquals(201, response.getStatus());
 		
 		
 		// try making a foreign key
 		// build another table
-		response = getClient().path("/"+dbID+"/MAIN/table/linkTable/false").post(null);
+		response = getClient().path("/"+dbID+"/table/linkTable/false").post(null);
 		assertEquals(201, response.getStatus());
 		
 		// and a column to link
 		ColumnRequest linkColumn = this.buildColumnRequest("other_id", "int", null, true, false);
-		response = getClient().path("/"+dbID+"/MAIN/table/linkTable/column/other_id/false").post(linkColumn);
+		response = getClient().path("/"+dbID+"/table/linkTable/column/other_id/false").post(linkColumn);
 		assertEquals(201, response.getStatus());
 		
 		
@@ -237,50 +235,50 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		PositionRequest positions = new PositionRequest();
 		positions.setPositions(tablePositionsArray);
 		
-		response = getClient().path("/"+dbID+"/MAIN/positions").put(positions);
+		response = getClient().path("/"+dbID+"/positions").put(positions);
 		assertEquals(200, response.getStatus());
 		
 		// create to the relationship as a constraint
-		ArrayList<String> columns = new ArrayList<String>();
-		columns.add("other_id");
+		String[] columns = {"other_id"};
 		ConstraintRequest constraint = this.buildConstraintRequest("link_constraint", constraint_type.FOREIGN, columns, "testTable", "id");
-		response = getClient().path("/"+dbID+"/MAIN/table/linkTable/constraint/link_constraint/false").post(constraint);
+		response = getClient().path("/"+dbID+"/table/linkTable/constraint/link_constraint/false").post(constraint);
 		assertEquals(201, response.getStatus());
 		
 		// set a table comment
 		String comment = "A bi££are cømment";
 		CommentRequest commentRequest = this.buildCommentRequest(comment);
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/comment/false").post(commentRequest);
+		response = getClient().path("/"+dbID+"/table/testTable/comment/false").post(commentRequest);
 		assertEquals(201, response.getStatus());
 		
 		// set a column comment
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/column/testColumn/comment/false").post(commentRequest);
+		response = getClient().path("/"+dbID+"/table/testTable/column/testColumn/comment/false").post(commentRequest);
 		assertEquals(201, response.getStatus());
 		
 		// rename the PK constraint
 		pkey_contstraint = this.buildConstraintRequest("pkey_testTableRenamed", constraint_type.PRIMARY, columnNames, "", "");
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/constraint/pkey_testTable_1/false").put(pkey_contstraint);
+		response = getClient().path("/"+dbID+"/table/testTable/constraint/pkey_testTable_1/false").put(pkey_contstraint);
 		assertEquals(200, response.getStatus());
 		
 		// delete the FK constraint
-		response = getClient().path("/"+dbID+"/MAIN/table/linkTable/constraint/link_constraint_2/false").delete();
+		response = getClient().path("/"+dbID+"/table/linkTable/constraint/link_constraint_2/false").delete();
 		assertEquals(200, response.getStatus());
 		
 		// delete the PK constraint
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/constraint/pkey_testTableRenamed/false").delete();
+		response = getClient().path("/"+dbID+"/table/testTable/constraint/pkey_testTableRenamed/false").delete();
 		assertEquals(200, response.getStatus());
 		
 		// create an index
-		columns.clear();
-		columns.add("testColumn");
-		IndexRequest index = this.buildIndexRequest("testIndex", false, columns);
-		response = getClient().path("/"+dbID+"/MAIN/table/testTable/index/testIndex/false").post(index);
+	    ArrayList<String> columns2 = new ArrayList<String>();
+		columns2.clear();
+		columns2.add("testColumn");
+		IndexRequest index = this.buildIndexRequest("testIndex", false, columns2);
+		response = getClient().path("/"+dbID+"/table/testTable/index/testIndex/false").post(index);
 		assertEquals(201, response.getStatus());
 		
 		
 		
 		// get the whole database structure
-		response = getClient().path("/"+dbID+"/MAIN").get();
+		response = getClient().path("/"+dbID+"/").get();
 		assertEquals(200, response.getStatus());
 		TableList tableList = (TableList)response.readEntity(TableList.class);
 		@SuppressWarnings("rawtypes")
@@ -289,7 +287,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		
 		
 		// delete the original
-		response = getClient().path("/"+dbID+"/MAIN").delete();
+		response = getClient().path("/"+dbID+"/").delete();
 		assertEquals(200, response.getStatus());
 		
 		logout();

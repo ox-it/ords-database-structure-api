@@ -117,43 +117,19 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		}
 
 
-	}
+	}	
 
 	@Override
-	public OrdsPhysicalDatabase createNewDatabase(int id, DatabaseRequest databaseDTO,
-			String instance) throws Exception {
-		String username = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		this.createOBDCUserRole(username, password);
-		OrdsPhysicalDatabase db;
-		if ( instance.equalsIgnoreCase("MAIN")) {
-			db = this.createEmptyDatabase(id, databaseDTO, instance,
-					username, password);
-		}
-		else {
-			db = this.cloneDatabase(id, instance, username);
-		}
-		
-		DatabaseStructureRoleService.Factory.getInstance()
-					.createInitialPermissions(getLogicalDatabase(db.getLogicalDatabaseId()));
-		return db;
-	}
-	
-	
-
-	@Override
-	public OrdsPhysicalDatabase getDatabaseMetaData(int dbId, String instance)
+	public OrdsPhysicalDatabase getDatabaseMetaData(int dbId)
 			throws Exception {
 		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
 			Transaction transaction = session.beginTransaction();
-			EntityType dbType = OrdsPhysicalDatabase.EntityType
-					.valueOf(instance.toUpperCase());
 			@SuppressWarnings("unchecked")
 			List<OrdsPhysicalDatabase> dbs = session
 					.createCriteria(OrdsPhysicalDatabase.class)
 					.add(Restrictions.eq("physicalDatabaseId", dbId))
-					.add(Restrictions.eq("entityType", dbType)).list();
+					.list();
 			transaction.commit();
 			if (dbs.size() != 1) {
 				throw new NotFoundException("Cannot find physical database id "
@@ -172,19 +148,15 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	}
 
 	@Override
-	public TableList getDatabaseTableList(int dbId, String instance,
-			boolean staging) throws Exception {
-//		String userName = this.getODBCUserName();
-//		String password = this.getODBCPassword();
-		// we need to get the physical database this time because we need it's
-		// id later
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
+	public TableList getDatabaseTableList(int dbId, boolean staging) throws Exception {
+
+		OrdsPhysicalDatabase database = this.getDatabaseMetaData(dbId);
 		if ( database == null ) {
 			throw new NotFoundException();
 		}
-		String databaseName = database.getDbConsumedName();
+		String databaseName =  database.getDbConsumedName();
 		if ( staging ) {
-			databaseName = this.calculateStagingName(databaseName);
+			databaseName = this.calculateStagingName(database.getDbConsumedName());
 		}
 		String server = database.getDatabaseServer();
 
@@ -226,16 +198,14 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	}
 
 	@Override
-	public String createNewStagingDatabase(int dbId, String instance)
+	public String createNewStagingDatabase(int dbId)
 			throws Exception {
 		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(
-				dbId, instance);
+		OrdsPhysicalDatabase database = this.getDatabaseMetaData(dbId);
 		String stagingName = this.calculateStagingName(database
 				.getDbConsumedName());
 		if (this.checkDatabaseExists(stagingName)) {
-			this.deleteDatabase(dbId, instance, true);
+			this.deleteDatabase(dbId, true);
 		}
 		String clonedb = String.format(
 				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s OWNER = %s",
@@ -251,7 +221,6 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		//String server = database.getDatabaseServer();
 		//this.runJDBCQuery(createSequence, null, server, stagingName);
 		
-		
 		return stagingName;
 	}
 	
@@ -264,10 +233,9 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	}
 
 	@Override
-	public void mergeStagingToActual(int dbId, String instance)
+	public void mergeStagingToActual(int dbId)
 			throws Exception {
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(
-				dbId, instance);
+		OrdsPhysicalDatabase database = this.getDatabaseMetaData(dbId);
 		String databaseName = database.getDbConsumedName();
 		String stagingName = this.calculateStagingName(databaseName);
 
@@ -286,46 +254,45 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	
 
 	@Override
-	public OrdsPhysicalDatabase mergeInstanceToMain(int dbId, String instance)
+	public OrdsPhysicalDatabase mergeInstanceToMain(OrdsPhysicalDatabase source, OrdsPhysicalDatabase target)
 			throws Exception {
-		// check for original database
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, "MAIN");
-		String databaseName = database.getDbConsumedName();
-		String instanceDbName = this.calculateInstanceName(database, instance);
 		
-		if ( !this.checkDatabaseExists(databaseName)) {
-			throw new NotFoundException("Original database does not exist");
+		// check for source database
+		String sourceDatabaseName = source.getDbConsumedName();
+		if ( !this.checkDatabaseExists(sourceDatabaseName)) {
+			throw new NotFoundException("Source database does not exist");
 		}
-		String sql = "rollback transaction; drop database " + databaseName
+		// check for target database
+		String targetDatabaseName = target.getDbConsumedName();
+		if ( !this.checkDatabaseExists(targetDatabaseName)) {
+			throw new NotFoundException("Target database does not exist");
+		}
+		
+		String sql = "rollback transaction; drop database " + targetDatabaseName
 				+ ";";
 		this.runSQLStatementOnOrdsDB(sql);
-		sql = String.format("ALTER DATABASE %s RENAME TO %s", instanceDbName,
-				databaseName);
+		sql = String.format("ALTER DATABASE %s RENAME TO %s", 
+				quote_ident(sourceDatabaseName),
+				quote_ident(targetDatabaseName));
 		this.runSQLStatementOnOrdsDB(sql);
 		
 		// now we need to find and remove the row from physical database
-		
-		// I think consumed name should be unique
-		OrdsPhysicalDatabase dbRowToDelete = this.getDBOnCriteria("dbConsumedName", instanceDbName);
-		this.removeModelObject(dbRowToDelete);
+		this.removeModelObject(source);
 
-		return database;
+		return target;
 	}
 
 
 	@Override
-	public void deleteDatabase(int dbId, String instance, boolean staging)
+	public void deleteDatabase(int dbId, boolean staging)
 			throws Exception {
-		// TODO Auto-generated method stub
-		OrdsPhysicalDatabase database = getPhysicalDatabaseFromIDInstance(dbId,
-				instance);
+		OrdsPhysicalDatabase database = this.getDatabaseMetaData(dbId);
 		String databaseName;
 		if (!staging) {
 			databaseName = database.getDbConsumedName();
 			this.removeModelObject(database);
 		} else {
-			databaseName = this.calculateStagingName(database
-					.getDbConsumedName());
+			databaseName = this.calculateStagingName(database.getDbConsumedName());
 		}
 		String statement = this.getTerminateStatement(databaseName);
 		this.runSQLQuery(statement, null, null, null);
@@ -350,21 +317,25 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		}
 	}
 	
-	
-	private OrdsPhysicalDatabase cloneDatabase (int origDbId, String newInstance, String userName ) throws Exception {
-		OrdsPhysicalDatabase origDb = this.getPhysicalDatabaseFromIDInstance(origDbId, "MAIN");
-		// logicalDatabaseId is common
-		int ldbId = origDb.getLogicalDatabaseId();
+	@Override
+	public OrdsPhysicalDatabase createNewDatabaseFromExisting (int origDbId, DatabaseRequest dto ) throws Exception {
+		
+		String userName = this.getODBCUserName();
+		String password = this.getODBCPassword();
+		this.createOBDCUserRole(userName, password);
+
+		OrdsPhysicalDatabase templateDb = this.getDatabaseMetaData(origDbId);
+				
 		// consumed name is on original
-		String name = this.calculateInstanceName(origDb, newInstance);
+		String templateName = templateDb.getDbConsumedName();
+		
 		// create the new record
 		OrdsPhysicalDatabase newDb = new OrdsPhysicalDatabase();
-		newDb.setLogicalDatabaseId(ldbId);
-		newDb.setDatabaseServer(origDb.getDatabaseServer());
+		newDb.setLogicalDatabaseId(templateDb.getLogicalDatabaseId());
+		newDb.setDatabaseServer(templateDb.getDatabaseServer());
 		newDb.setImportProgress(OrdsPhysicalDatabase.ImportType.FINISHED);
-		newDb.setDbConsumedName(name);
 		EntityType type;
-		if ( newInstance.equalsIgnoreCase("MILESTONE")) {
+		if ( dto.getInstance().equalsIgnoreCase("MILESTONE")) {
 			type = EntityType.MILESTONE;
 		}
 		else {
@@ -375,33 +346,44 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		newDb.setFullPathToDirectory(System.getProperty("java.io.tmpdir")
 				+ "/databases");
 		newDb.setDatabaseType("RAW");
-
 		this.saveModelObject(newDb);
 		
-		if (this.checkDatabaseExists(name)) {
-			String statement = this.getTerminateStatement(name);
+		String newDatabaseName = newDb.getDbConsumedName();
+				
+		//
+		// If this clone already exists, drop it.
+		//
+		if (this.checkDatabaseExists(newDatabaseName)) {
+			String statement = this.getTerminateStatement(newDatabaseName);
 			this.runSQLQuery(statement, null, null, null);
-			statement = "rollback transaction; drop database " + name + ";";
+			statement = "rollback transaction; drop database " + newDatabaseName + ";";
 			this.runSQLStatementOnOrdsDB(statement);
 		}
+		
+		//
+		// Create clone
+		//
 		String clonedb = String.format(
 				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s OWNER = %s",
-				quote_ident(name),
-				quote_ident(origDb.getDbConsumedName()),
+				quote_ident(newDatabaseName),
+				quote_ident(templateName),
 				quote_ident(userName));
 		this.runSQLStatementOnOrdsDB(clonedb);
 
+		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(getLogicalDatabase(newDb.getLogicalDatabaseId()));
 		return newDb;
 	
 	}
 
-	private OrdsPhysicalDatabase createEmptyDatabase(int id, DatabaseRequest databaseDTO, String instance,
-			String userName, String password) throws Exception {
+	@Override
+	public OrdsPhysicalDatabase createNewDatabase(DatabaseRequest databaseDTO) throws Exception {
 		log.debug("createEmptyDatabase");
+		
+		String userName = this.getODBCUserName();
+		String password = this.getODBCPassword();
+		this.createOBDCUserRole(userName, password);
+		
 		OrdsPhysicalDatabase db = new OrdsPhysicalDatabase();
-		if ( id != 0 ) {
-			db.setPhysicalDatabaseId(id);
-		}
 		db.setLogicalDatabaseId(databaseDTO.getGroupId());
 		db.setDatabaseServer(databaseDTO.getDatabaseServer());
 		db.setImportProgress(OrdsPhysicalDatabase.ImportType.FINISHED);
@@ -416,19 +398,22 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		if (db.getPhysicalDatabaseId() == 0) {
 			log.error("Cannot get physical db id");
 			return null;
-		} else {
-			String dbName = db.getDbConsumedName();
-			String statement = String.format(
-					"rollback transaction;create database %s owner = \"%s\";",
-					dbName, userName);
-
-			this.runSQLStatementOnOrdsDB(statement);
-			String createSequence = "CREATE SEQUENCE ords_constraint_seq";
-			String server = db.getDatabaseServer();
-			this.runJDBCQuery(createSequence, null, server, dbName);
-
-			return db;
 		}
+		
+		String dbName = db.getDbConsumedName();
+		String statement = String.format(
+				"rollback transaction;create database %s owner = \"%s\";",
+				quote_ident(dbName), userName);
+
+		this.runSQLStatementOnOrdsDB(statement);
+		String createSequence = "CREATE SEQUENCE ords_constraint_seq";
+		String server = db.getDatabaseServer();
+		this.runJDBCQuery(createSequence, null, server, dbName);
+
+		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(getLogicalDatabase(db.getLogicalDatabaseId()));
+
+		return db;
+		
 	}
 
 	private SchemaDesignerTable getSchemaDesignerTable(int databaseId,
@@ -468,10 +453,6 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		}
 
 	}
-	
-	private String calculateInstanceName ( OrdsPhysicalDatabase db, String instance ){
-		return 	(instance + "_" + db.getPhysicalDatabaseId() + "_" + db.getLogicalDatabaseId()).toLowerCase();
-	}
 
 	@Override
 	public OrdsDB getLogicalDatabase(int dbId) throws Exception {
@@ -501,11 +482,10 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 
 
 	@Override
-	public boolean checkDatabaseExists(int dbId, String instance,
-			boolean staging) throws Exception {
+	public boolean checkDatabaseExists(int dbId, boolean staging) throws Exception {
 
-		OrdsPhysicalDatabase physicalDatabase = this.getDatabaseMetaData(dbId, instance);
-		String databaseName = this.calculateInstanceName(physicalDatabase, instance);
+		OrdsPhysicalDatabase physicalDatabase = this.getDatabaseMetaData(dbId);
+		String databaseName = physicalDatabase.getDbConsumedName();
 		String server = physicalDatabase.getDatabaseServer();
 		if (staging){
 			databaseName = this.calculateStagingName(databaseName);

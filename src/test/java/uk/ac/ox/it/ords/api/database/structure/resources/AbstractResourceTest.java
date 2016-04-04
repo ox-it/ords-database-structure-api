@@ -40,7 +40,6 @@ import org.junit.BeforeClass;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 
-import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureRoleService;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
 import uk.ac.ox.it.ords.api.database.structure.model.User;
@@ -284,8 +283,7 @@ public class AbstractResourceTest extends AbstractShiroTest {
 	public void logout(){
 		for ( String dbId: databaseIds.keySet() ) {
 			WebClient client = getClient();
-			String instance = databaseIds.get(dbId);
-			Response r = client.path("/"+dbId+"/MAIN/"+instance+"/delete/false").delete();
+			client.path("/"+dbId).delete();
 		}
 		SecurityUtils.getSubject().logout();
 	}

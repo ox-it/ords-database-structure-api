@@ -16,8 +16,6 @@
 
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
-import java.util.List;
-
 import javax.ws.rs.NotFoundException;
 
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
@@ -28,11 +26,10 @@ public class CommentServiceImpl extends StructureServiceImpl
 			CommentService {
 
 	@Override
-	public String getTableComment(int dbId, String instance, String tableName,
+	public String getTableComment(OrdsPhysicalDatabase database, String tableName,
 			boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -45,11 +42,10 @@ public class CommentServiceImpl extends StructureServiceImpl
 	}
 
 	@Override
-	public void setTableComment(int dbId, String instance, String tableName,
+	public void setTableComment(OrdsPhysicalDatabase database, String tableName,
 			String comment, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -64,11 +60,10 @@ public class CommentServiceImpl extends StructureServiceImpl
 	}
 
 	@Override
-	public String getColumnComment(int dbId, String instance, String tableName,
+	public String getColumnComment(OrdsPhysicalDatabase database, String tableName,
 			String columnName, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -81,11 +76,10 @@ public class CommentServiceImpl extends StructureServiceImpl
 	}
 
 	@Override
-	public void setColumnComment(int dbId, String instance, String tableName,
+	public void setColumnComment(OrdsPhysicalDatabase database, String tableName,
 			String columnName, String comment, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);

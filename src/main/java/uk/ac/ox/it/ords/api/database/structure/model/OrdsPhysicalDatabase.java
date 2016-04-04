@@ -228,33 +228,7 @@ public class OrdsPhysicalDatabase implements Cloneable {
     }
 
     public String getDbConsumedName() {
-        /*
-         * FIXME
-         * A getter should not alter the data - needs to be sorted out
-         */
-        if (dbConsumedName == null) {
-            String name = (getEntityType().toString() + "_" + getPhysicalDatabaseId() + "_" + getLogicalDatabaseId()).toLowerCase();
-
-            setDbConsumedName(name);
-        }
-        return dbConsumedName;
-    }
-
-    public void setDbConsumedName(String dbConsumedName) {
-        this.dbConsumedName = dbConsumedName;
-    }
-
-    /**
-     * Set the consumed name based on the current entity type
-     */
-    public void resetConsumedName() {
-        if (dbConsumedName == null) {
-            //setDbConsumedName(GeneralUtils.calculateWebappDatabaseName(this));
-        	// bodge
-        	getDbConsumedName();
-        }
-        String[] nameTokens = dbConsumedName.split("_");
-        dbConsumedName = entityType.toString().toLowerCase() + "_" + nameTokens[1] + "_" + nameTokens[2];
+          return (getEntityType().toString() + "_" + getPhysicalDatabaseId() + "_" + getLogicalDatabaseId()).toLowerCase();
     }
 
     public String getUploadedHost() {

@@ -19,6 +19,7 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 import java.util.ServiceLoader;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.ConstraintRequest;
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.ConstraintServiceImpl;
 
 public interface ConstraintService {
@@ -32,7 +33,7 @@ public interface ConstraintService {
 	 * @return A constraint class containing the contraint's metadata
 	 * @throws Exception
 	 */
-	public MessageEntity getConstraint ( int dbId, String instance, String tableName, String constraintName, boolean staging ) throws Exception;
+	public MessageEntity getConstraint (OrdsPhysicalDatabase database, String tableName, String constraintName, boolean staging ) throws Exception;
 	
 	/**
 	 * This function creates new constraint with the metadata contained in the ConstraintRequest class
@@ -42,7 +43,7 @@ public interface ConstraintService {
 	 * @param newConstraint
 	 * @throws Exception
 	 */
-	public void createConstraint ( int dbId, String instance, String tableName, String constraintName, ConstraintRequest newConstraint, boolean staging ) throws Exception;
+	public void createConstraint (OrdsPhysicalDatabase database, String tableName, String constraintName, ConstraintRequest newConstraint, boolean staging ) throws Exception;
 	
 	/**
 	 * Update a named constraint with the metadata in the ConstraintRequest object
@@ -53,7 +54,7 @@ public interface ConstraintService {
 	 * @param constraint
 	 * @throws Exception
 	 */
-	public void updateConstraint ( int dbId, String instance, String tableName, String constraintName, ConstraintRequest constraint, boolean staging ) throws Exception;
+	public void updateConstraint ( OrdsPhysicalDatabase database, String tableName, String constraintName, ConstraintRequest constraint, boolean staging ) throws Exception;
 	
 	/**
 	 * Deletes a named constraint
@@ -63,7 +64,7 @@ public interface ConstraintService {
 	 * @param constraint
 	 * @throws Exception
 	 */
-	public void deleteConstraint ( int dbId, String instance, String tableName, String constraint, boolean staging ) throws Exception;
+	public void deleteConstraint ( OrdsPhysicalDatabase database, String tableName, String constraint, boolean staging ) throws Exception;
 	
 	
 	

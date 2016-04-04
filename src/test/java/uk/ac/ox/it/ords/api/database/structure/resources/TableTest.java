@@ -39,7 +39,7 @@ public class TableTest extends AbstractDatabaseTestRunner{
 	public void setupDatabase(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
+		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
 		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
@@ -54,7 +54,7 @@ public class TableTest extends AbstractDatabaseTestRunner{
 	@After
 	public void tearDownDatabase(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");		
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN").delete();
+		Response response = getClient().path("/"+physicalDatabaseId+"/").delete();
 		assertEquals(200, response.getStatus());
 		AbstractResourceTest.databaseIds.remove(logicalDatabaseId);
 		logout();
@@ -63,10 +63,10 @@ public class TableTest extends AbstractDatabaseTestRunner{
 	@Test
 	public void createTable(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");		
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").post(null);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").post(null);
 		assertEquals(201, response.getStatus());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").delete();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").delete();
 		assertEquals(200, response.getStatus());
 		
 		logout();
@@ -75,13 +75,13 @@ public class TableTest extends AbstractDatabaseTestRunner{
 	@Test
 	public void createTableAlreadyExists(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");		
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").post(null);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").post(null);
 		assertEquals(201, response.getStatus());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").post(null);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").post(null);
 		assertEquals(409, response.getStatus());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").delete();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").delete();
 		assertEquals(200, response.getStatus());
 	
 		
@@ -90,14 +90,14 @@ public class TableTest extends AbstractDatabaseTestRunner{
 	
 	@Test
 	public void createTableUnauth(){
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").post(null);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").post(null);
 		assertEquals(403, response.getStatus());
 	}
 	
 	@Test
 	public void getNonexistantTable(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");		
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/notable/false").get();
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/notable/false").get();
 		assertEquals(404, response.getStatus());
 		logout();
 	}
@@ -105,7 +105,7 @@ public class TableTest extends AbstractDatabaseTestRunner{
 	@Test
 	public void deleteNonexistantTable(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");		
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/notable/false").delete();
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/notable/false").delete();
 		assertEquals(404, response.getStatus());
 		logout();
 	}
@@ -114,18 +114,18 @@ public class TableTest extends AbstractDatabaseTestRunner{
 	@Test
 	public void renameTable(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");		
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").post(null);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").post(null);
 		assertEquals(201, response.getStatus());
 		
 		TableRenameRequest request = new TableRenameRequest();
 		request.setNewname("testtable2");
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").put(request);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").put(request);
 		assertEquals(200, response.getStatus());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable2/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable2/false").get();
 		assertEquals(200, response.getStatus());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable2/false").delete();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable2/false").delete();
 		assertEquals(200, response.getStatus());
 		
 		logout();
@@ -137,7 +137,7 @@ public class TableTest extends AbstractDatabaseTestRunner{
 		
 		TableRenameRequest request = new TableRenameRequest();
 		request.setNewname("testtable2");
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").put(request);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").put(request);
 		assertEquals(404, response.getStatus());
 		
 		logout();
@@ -147,37 +147,37 @@ public class TableTest extends AbstractDatabaseTestRunner{
 	public void renameTableAndCheckSequences(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").post(null);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").post(null);
 		assertEquals(201, response.getStatus());
 		
 		// build a column
 		ColumnRequest column1 = this.buildColumnRequest("auto", "int", null, false, true);
 		
 		// Create a column
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/auto/false").post(column1);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
 		TableRenameRequest request = new TableRenameRequest();
 		request.setNewname("testtable2");
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").put(request);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").put(request);
 		assertEquals(200, response.getStatus());
 		
 		// Check renamed table exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable2/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable2/false").get();
 		assertEquals(200, response.getStatus());
 		
 		// Check previously named table doesn't
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").get();
 		assertEquals(404, response.getStatus());
 		
 		// Check column exists in renamed table and is still autoinc
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable2/column/auto/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable2/column/auto/false").get();
 		assertEquals(200, response.getStatus());
 		
 		ColumnRequest column = response.readEntity(ColumnRequest.class);
 		assertTrue(column.isAutoincrement());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable2/false").delete();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable2/false").delete();
 		assertEquals(200, response.getStatus());
 		
 		logout();
@@ -186,27 +186,27 @@ public class TableTest extends AbstractDatabaseTestRunner{
 	@Test
 	public void renameTableOverwritingAnother(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");		
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").post(null);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").post(null);
 		assertEquals(201, response.getStatus());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable2/false").post(null);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable2/false").post(null);
 		assertEquals(201, response.getStatus());
 		
 		TableRenameRequest request = new TableRenameRequest();
 		request.setNewname("testtable2");
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").put(request);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").put(request);
 		assertEquals(409, response.getStatus());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").get();
 		assertEquals(200, response.getStatus());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable2/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable2/false").get();
 		assertEquals(200, response.getStatus());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").delete();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").delete();
 		assertEquals(200, response.getStatus());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable2/false").delete();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable2/false").delete();
 		assertEquals(200, response.getStatus());
 		
 		logout();

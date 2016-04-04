@@ -36,7 +36,7 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 	public void setupTable(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
-		Response response = getClient().path("/0/MAIN").post(dbr);
+		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
 		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
@@ -46,7 +46,7 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		physicalDatabaseId = db.getPhysicalDatabaseId();
 		
 		// Create a table
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").post(null);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").post(null);
 		assertEquals(201, response.getStatus());
 		logout();
 	}
@@ -54,10 +54,10 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 	@After
 	public void tearDownTable(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/false").delete();
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").delete();
 		assertEquals(200, response.getStatus());
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN").delete();
+		response = getClient().path("/"+physicalDatabaseId).delete();
 		assertEquals(200, response.getStatus());
 		AbstractResourceTest.databaseIds.remove(logicalDatabaseId);
 		
@@ -74,11 +74,11 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
 		
 		// Create a column
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/testColumn/false").post(column1);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
 		// Check column exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/testColumn/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").get();
 		assertEquals(200, response.getStatus());
 
 		logout();
@@ -94,11 +94,11 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column1 = this.buildColumnRequest("auto", "int", null, false, true);
 		
 		// Create a column
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/auto/false").post(column1);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
 		// Check column exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/auto/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").get();
 		assertEquals(200, response.getStatus());
 		
 		ColumnRequest column = response.readEntity(ColumnRequest.class);
@@ -116,7 +116,7 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column1 = this.buildColumnRequest("auto", "varchar", null, false, true);
 		
 		// Create a column
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/auto/false").post(column1);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").post(column1);
 		assertEquals(400, response.getStatus());
 
 		logout();
@@ -131,7 +131,7 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column1 = this.buildColumnRequest("auto", "int", "0", false, true);
 		
 		// Create a column
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/auto/false").post(column1);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").post(column1);
 		assertEquals(400, response.getStatus());
 
 		logout();
@@ -146,11 +146,11 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column1 = this.buildColumnRequest("testcol", "varchar", "banana", true, false);
 		
 		// Create a column
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/testcol/false").post(column1);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
 		// Check column exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/testcol/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").get();
 		assertEquals(200, response.getStatus());
 		
 		ColumnRequest column = response.readEntity(ColumnRequest.class);
@@ -168,19 +168,19 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column1 = this.buildColumnRequest("testcol", "varchar", "banana", true, false);
 		
 		// Create a column
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/testcol/false").post(column1);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
 		// Check column exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/testcol/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").get();
 		assertEquals(200, response.getStatus());
 		
 		// Delete
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/testcol/false").delete();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").delete();
 		assertEquals(200, response.getStatus());
 		
 		// Check column no longer exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/testcol/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").get();
 		assertEquals(404, response.getStatus());
 
 		logout();
@@ -192,7 +192,7 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		
 		// Check column exists
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/testcolx/false").get();
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcolx/false").get();
 		assertEquals(404, response.getStatus());
 
 		logout();
@@ -204,7 +204,7 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		
 		// Check column exists
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/testcolx/false").delete();
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcolx/false").delete();
 		assertEquals(404, response.getStatus());
 
 		logout();
@@ -219,11 +219,11 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column1 = this.buildColumnRequest("auto", "int", null, true, false);
 		
 		// Create a column
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/auto/false").post(column1);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
 		// Check column exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/auto/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").get();
 		assertEquals(200, response.getStatus());
 		
 		ColumnRequest column = response.readEntity(ColumnRequest.class);
@@ -233,10 +233,10 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		requestStruct request = new requestStruct();
 		request.autoincrement = "true";
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/auto/false").put(request);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").put(request);
 		assertEquals(200, response.getStatus());
 
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/auto/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/auto/false").get();
 		column = response.readEntity(ColumnRequest.class);
 		assertTrue(column.isAutoincrement());
 
@@ -252,21 +252,21 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column1 = this.buildColumnRequest("test1", "varchar", null, true, false);
 		
 		// Create a column
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test1/false").post(column1);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test1/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
 		// Check column exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test1/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test1/false").get();
 		assertEquals(200, response.getStatus());
 		
 		// Update
 		requestStruct request = new requestStruct();
 		request.newname = "test2";
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test1/false").put(request);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test1/false").put(request);
 		assertEquals(200, response.getStatus());
 		
 		// Check column exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test2/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test2/false").get();
 		assertEquals(200, response.getStatus());
 
 
@@ -282,11 +282,11 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column1 = this.buildColumnRequest("test1", "varchar", null, true, false);
 		
 		// Create a column
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test1/false").post(column1);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test1/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
 		// Check column exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test1/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test1/false").get();
 		assertEquals(200, response.getStatus());
 		
 		// Update
@@ -294,11 +294,11 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		request.defaultvalue = "banana";
 		request.nullable = "false";
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test1/false").put(request);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test1/false").put(request);
 		assertEquals(200, response.getStatus());
 		
 		// Check column exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test1/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test1/false").get();
 		assertEquals(200, response.getStatus());
 
 		ColumnRequest column = response.readEntity(ColumnRequest.class);
@@ -317,22 +317,22 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column1 = this.buildColumnRequest("test1", "varchar", null, true, false);
 		
 		// Create a column
-		Response response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test1/false").post(column1);
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test1/false").post(column1);
 		assertEquals(201, response.getStatus());
 		
 		// Check column exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test1/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test1/false").get();
 		assertEquals(200, response.getStatus());
 		
 		// Update
 		requestStruct request = new requestStruct();
 		request.datatype="text";
 		
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test1/false").put(request);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test1/false").put(request);
 		assertEquals(200, response.getStatus());
 		
 		// Check column exists
-		response = getClient().path("/"+physicalDatabaseId+"/MAIN/table/testtable/column/test1/false").get();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/test1/false").get();
 		assertEquals(200, response.getStatus());
 
 		ColumnRequest column = response.readEntity(ColumnRequest.class);

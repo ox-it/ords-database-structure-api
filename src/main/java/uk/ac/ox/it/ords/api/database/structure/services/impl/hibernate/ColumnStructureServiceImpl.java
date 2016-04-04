@@ -45,8 +45,7 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 			"bigint", "smallint", "int2", "int4", "int8");
 
 	public ColumnRequest getColumnMetadata(
-			int dbId, 
-			String instance,
+			OrdsPhysicalDatabase database,
 			String tableName, 
 			String columnName, 
 			boolean staging
@@ -54,8 +53,8 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 			throws Exception {
 
 		
-		String server = this.getPhysicalDatabaseFromIDInstance(dbId, instance).getDatabaseServer();		
-		String databaseName = this.dbNameFromIDInstance(dbId, instance, staging);
+		String server = database.getDatabaseServer();		
+		String databaseName = database.getDbConsumedName();
 
 			ArrayList<String> fields = new ArrayList<String>();
 			fields.add("column_name");
@@ -104,7 +103,7 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 			return column;
 	}
 
-	public void createColumn(int dbId, String instance, String tableName,
+	public void createColumn(OrdsPhysicalDatabase database, String tableName,
 			String columnName, ColumnRequest column, boolean staging)
 			throws Exception {
 
@@ -170,7 +169,6 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 			}
 		}
 		String userName = this.getODBCUserName();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -200,10 +198,9 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 		this.runSQLStatements(statements, server, databaseName);
 	}
 
-	public void updateColumn(int dbId, String instance, String tableName,
+	public void updateColumn(OrdsPhysicalDatabase database, String tableName,
 			String columnName, ColumnRequest request, boolean staging)
 			throws Exception {
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -434,9 +431,8 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 		this.runSQLStatements(statements, server, databaseName);
 	}
 
-	public void deleteColumn(int dbId, String instance, String tableName,
+	public void deleteColumn(OrdsPhysicalDatabase database, String tableName,
 			String columnName, boolean staging) throws Exception {
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);

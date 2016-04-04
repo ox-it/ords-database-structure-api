@@ -45,11 +45,10 @@ public class Odbc {
 	private SecureRandom random = new SecureRandom();
 	
 	@POST
-	@Path("{id}/{instance}/odbc/")
+	@Path("{id}/odbc/")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response addOdbcRoleForCurrentUser(
-			@PathParam("id") int id,
-			@PathParam("instance") String instance
+			@PathParam("id") int id
 		) throws Exception{
 		
 		//
@@ -65,7 +64,7 @@ public class Odbc {
 		OrdsPhysicalDatabase database = null;
 		
 		try {
-			database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id, instance);
+			database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id);
 		} catch (Exception e) {
 			return Response.status(404).build();
 		}
@@ -74,7 +73,7 @@ public class Odbc {
 			return Response.status(404).build();
 		}
 		
-		String databaseName = calculateInstanceName(database, instance);
+		String databaseName = database.getDbConsumedName();
 		
 		//
 		// Check ODBC is enabled for this database for this user
@@ -130,11 +129,10 @@ public class Odbc {
 	}
 	
 	@DELETE
-	@Path("{id}/{instance}/odbc/{role}")
+	@Path("{id}/odbc/{role}")
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response removeOdbcRole(
 			@PathParam("id") int id,
-			@PathParam("instance") String instance,
 			@PathParam("role") String role
 			) throws Exception{
 
@@ -152,7 +150,7 @@ public class Odbc {
 		OrdsPhysicalDatabase database = null;
 		
 		try {
-			database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id, instance);
+			database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id);
 		} catch (Exception e) {
 			return Response.status(404).build();
 		}
@@ -161,7 +159,7 @@ public class Odbc {
 			return Response.status(404).build();
 		}
 		
-		String databaseName = calculateInstanceName(database, instance);
+		String databaseName = database.getDbConsumedName();
 
 		//
 		// Check permission
@@ -176,10 +174,6 @@ public class Odbc {
 		OdbcService.Factory.getInstance().removeOdbcUserFromDatabase(role, database, databaseName);
 		
 		return Response.ok().build();
-	}
-	
-	private String calculateInstanceName ( OrdsPhysicalDatabase db, String instance ){
-		return 	(instance + "_" + db.getPhysicalDatabaseId() + "_" + db.getLogicalDatabaseId()).toLowerCase();
 	}
 
 }

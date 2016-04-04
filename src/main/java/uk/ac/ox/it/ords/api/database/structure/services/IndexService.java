@@ -19,6 +19,7 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 import java.util.ServiceLoader;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.IndexRequest;
+import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.IndexServiceImpl;
 
 public interface IndexService {
@@ -32,7 +33,7 @@ public interface IndexService {
 	 * @return
 	 * @throws Exception
 	 */
-	public MessageEntity getIndex ( int dbId, String instance, String tableName, String indexName, boolean staging ) throws Exception;
+	public MessageEntity getIndex ( OrdsPhysicalDatabase database, String tableName, String indexName, boolean staging ) throws Exception;
 	
 	/**
 	 * 
@@ -42,7 +43,7 @@ public interface IndexService {
 	 * @param newIndex
 	 * @throws Exception
 	 */
-	public void createIndex ( int dbId, String instance, String tableName, String indexName, IndexRequest newIndex, boolean staging ) throws Exception;
+	public void createIndex ( OrdsPhysicalDatabase database, String tableName, String indexName, IndexRequest newIndex, boolean staging ) throws Exception;
 	
 	/**
 	 * 
@@ -53,7 +54,7 @@ public interface IndexService {
 	 * @param index
 	 * @throws Exception
 	 */
-	public void updateIndex ( int dbId, String instance, String tableName, String indexName, IndexRequest index, boolean staging ) throws Exception;
+	public void updateIndex ( OrdsPhysicalDatabase database, String tableName, String indexName, IndexRequest index, boolean staging ) throws Exception;
 	
 	/**
 	 * 
@@ -63,7 +64,7 @@ public interface IndexService {
 	 * @param index
 	 * @throws Exception
 	 */
-	public void deleteIndex ( int dbId, String instance, String tableName, String indexName, boolean staging ) throws Exception;
+	public void deleteIndex ( OrdsPhysicalDatabase database, String tableName, String indexName, boolean staging ) throws Exception;
 
 	
 	/**

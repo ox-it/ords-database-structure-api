@@ -17,10 +17,8 @@
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import javax.ws.rs.NotFoundException;
-import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -35,11 +33,10 @@ public class IndexServiceImpl extends StructureServiceImpl
 			IndexService {
 
 	@Override
-	public MessageEntity getIndex(int dbId, String instance, String tableName,
+	public MessageEntity getIndex(OrdsPhysicalDatabase database, String tableName,
 			String indexName, boolean staging) throws Exception {
 		String userName = this.getODBCUserName();
 		String password = this.getODBCPassword();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -52,9 +49,8 @@ public class IndexServiceImpl extends StructureServiceImpl
 	}
 
 	@Override
-	public void createIndex(int dbId, String instance, String tableName,
+	public void createIndex(OrdsPhysicalDatabase database, String tableName,
 			String indexName, IndexRequest newIndex, boolean staging) throws Exception {
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -91,11 +87,10 @@ public class IndexServiceImpl extends StructureServiceImpl
 	
 
 	@Override
-	public void updateIndex(int dbId, String instance, String tableName,
+	public void updateIndex(OrdsPhysicalDatabase database, String tableName,
 			String indexName, IndexRequest index, boolean staging)
 			throws Exception {
         String newName = index.getNewname();
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -111,9 +106,8 @@ public class IndexServiceImpl extends StructureServiceImpl
 	}
 
 	@Override
-	public void deleteIndex(int dbId, String instance, String tableName,
+	public void deleteIndex(OrdsPhysicalDatabase database, String tableName,
 			String indexName, boolean staging) throws Exception {
-		OrdsPhysicalDatabase database = this.getPhysicalDatabaseFromIDInstance(dbId, instance);
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
