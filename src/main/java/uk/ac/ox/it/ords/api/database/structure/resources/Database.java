@@ -55,6 +55,12 @@ import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService
 import uk.ac.ox.it.ords.api.database.structure.services.MessageEntity;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 
+/**
+ * The REST API for database structure
+ * @Refactor split this into separate classes handling their concerns
+ * @author scottw
+ *
+ */
 @Api(value="Database Structure")
 @Path("/")
 public class Database extends AbstractResource{
