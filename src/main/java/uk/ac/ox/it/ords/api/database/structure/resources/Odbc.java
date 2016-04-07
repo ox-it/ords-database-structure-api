@@ -30,12 +30,14 @@ import javax.ws.rs.core.Response;
 import org.apache.shiro.SecurityUtils;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.OdbcResponse;
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.OdbcService;
 
+/**
+ * API for requesting and revoking ODBC access
+ */
 @Path("/")
 public class Odbc {
 	
@@ -44,6 +46,13 @@ public class Odbc {
 	//
 	private SecureRandom random = new SecureRandom();
 	
+	/**
+	 * Request ODBC access to a database for the current subject. This will generate new credentials, which
+	 * are returned to the requestor, but are not stored anywhere within ORDS.
+	 * @param id
+	 * @return an ODBCResponse containing all the connection details needed by a client to connect to the database by ODBC
+	 * @throws Exception
+	 */
 	@POST
 	@Path("{id}/odbc/")
 	@Produces( MediaType.APPLICATION_JSON )
@@ -63,26 +72,27 @@ public class Odbc {
 		//
 		OrdsPhysicalDatabase database = null;
 		
+		//
+		// Check that the database exists
+		//
 		try {
 			database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id);
 		} catch (Exception e) {
 			return Response.status(404).build();
 		}
-		
 		if (database == null){
 			return Response.status(404).build();
 		}
 		
+		//
+		// Get the name of the database within PostgreSQL
+		//
 		String databaseName = database.getDbConsumedName();
 		
 		//
 		// Check ODBC is enabled for this database for this user
 		//
-		OrdsDB ordsDB = DatabaseStructureService.Factory.getInstance().getLogicalDatabase(database.getLogicalDatabaseId());
-		if (ordsDB == null){
-			return Response.status(500).build();
-		}
-		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_REQUEST_ODBC_ACCESS(ordsDB.getLogicalDatabaseId()))){
+		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_REQUEST_ODBC_ACCESS(database.getLogicalDatabaseId()))){
 			return Response.status(403).build();
 		}
 
@@ -128,6 +138,13 @@ public class Odbc {
 		return Response.ok(response).build();
 	}
 	
+	/**
+	 * Revokes ODBC access on a database for a role
+	 * @param id the database id
+	 * @param role the name of the role to revoke
+	 * @return
+	 * @throws Exception
+	 */
 	@DELETE
 	@Path("{id}/odbc/{role}")
 	@Produces( MediaType.APPLICATION_JSON )
@@ -149,16 +166,21 @@ public class Odbc {
 		//
 		OrdsPhysicalDatabase database = null;
 		
+		//
+		// Check that it exists
+		//
 		try {
 			database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id);
 		} catch (Exception e) {
 			return Response.status(404).build();
 		}
-		
 		if (database == null){
 			return Response.status(404).build();
 		}
 		
+		//
+		// Get the name of the database in PostgreSQL
+		//
 		String databaseName = database.getDbConsumedName();
 
 		//

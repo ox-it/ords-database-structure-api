@@ -21,7 +21,6 @@ import org.hibernate.Transaction;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
 
 public class AbstractDatabaseTestRunner extends AbstractDatabaseTest {
@@ -30,25 +29,11 @@ public class AbstractDatabaseTestRunner extends AbstractDatabaseTest {
 	
 	@BeforeClass
 	public static void setup(){
-		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
-		Transaction transaction = session.beginTransaction();
-		OrdsDB database = new OrdsDB();
-		database.setDbName("DatabaseTest");
-		database.setDbDescription("DatabaseTest");
-		database.setDatabaseType("testing");
-		session.save(database);
-		transaction.commit();
-		logicalDatabaseId = database.getLogicalDatabaseId();
+		logicalDatabaseId = 99;
 	}
 	
 	@AfterClass
 	public static void tearDown(){
-		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
-		Transaction transaction = session.beginTransaction();
-		OrdsDB database = new OrdsDB();
-		database.setLogicalDatabaseId(logicalDatabaseId);
-		session.delete(database);
-		transaction.commit();
 	}
 
 }

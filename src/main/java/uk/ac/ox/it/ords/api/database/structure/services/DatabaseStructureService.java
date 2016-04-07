@@ -77,14 +77,6 @@ public interface DatabaseStructureService {
 	public OrdsPhysicalDatabase getDatabaseMetaData ( int dbId ) throws Exception;
 	
 	/**
-	 * Gets the logical database (group) for a specific database
-	 * @param dbId
-	 * @return
-	 * @throws Exception
-	 */
-	public OrdsDB getLogicalDatabase (int dbId) throws Exception;
-	
-	/**
 	 * Gets a table list object for the database which gives a complete breakdown the tables
 	 * and the columns indexes etc...
 	 * @param idbId

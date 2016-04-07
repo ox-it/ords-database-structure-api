@@ -44,7 +44,6 @@ import org.junit.Test;
 import uk.ac.ox.it.ords.api.database.structure.dto.ColumnRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.OdbcResponse;
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissionSets;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
@@ -70,20 +69,8 @@ public class OdbcTest extends AbstractDatabaseTest {
 	
 	@BeforeClass
 	public static void setupContext() throws Exception{
-		//
-		// Create a logical database
-		//
-		OrdsDB ordsDB = new OrdsDB();
-		ordsDB.setDatabaseProjectId(projectId);
-		ordsDB.setDatabaseType("relational");
-		ordsDB.setDbName("test");
-		ordsDB.setDbDescription("test");
-		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
-		Transaction transaction = session.beginTransaction();
-		session.save(ordsDB);
-		transaction.commit();
 		
-		logicalDatabaseId = ordsDB.getLogicalDatabaseId();
+		logicalDatabaseId = 101;
 		
 		//
 		// Enable ODBC
@@ -304,17 +291,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		// Create a second logical database
 		//
-		OrdsDB ordsDB = new OrdsDB();
-		ordsDB.setDatabaseProjectId(projectId);
-		ordsDB.setDatabaseType("relational");
-		ordsDB.setDbName("test");
-		ordsDB.setDbDescription("test");
-		Session session = HibernateUtils.getSessionFactory().getCurrentSession();
-		Transaction transaction = session.beginTransaction();
-		session.save(ordsDB);
-		transaction.commit();
-		
-		int logicalDatabaseId2 = ordsDB.getLogicalDatabaseId();
+		int logicalDatabaseId2 = 66;
 		
 		//
 		// Create a second database

@@ -18,7 +18,6 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 
 import java.util.ServiceLoader;
 
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.DatabaseStructureRoleServiceImpl;
 
 public interface DatabaseStructureRoleService {
@@ -28,7 +27,7 @@ public interface DatabaseStructureRoleService {
 	 * @param groupId
 	 * @throws Exception
 	 */
-	public void createInitialPermissions(OrdsDB database) throws Exception;
+	public void createInitialPermissions(int logicalDatabaseId) throws Exception;
 
 	   public static class Factory {
 			private static DatabaseStructureRoleService provider;
