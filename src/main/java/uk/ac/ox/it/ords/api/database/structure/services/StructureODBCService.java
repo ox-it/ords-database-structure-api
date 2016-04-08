@@ -20,9 +20,10 @@ import java.util.List;
 import java.util.ServiceLoader;
 
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
-import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.OdbcServiceImpl;
+import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.StructureODBCServiceImpl;
+import uk.ac.ox.it.ords.security.services.ODBCService;
 
-public interface OdbcService {
+public interface StructureODBCService extends ODBCService {
 	
 	/**
 	 * Create a read-only ODBC connection role
@@ -51,8 +52,8 @@ public interface OdbcService {
 	 * Factory for obtaining implementations
 	 */
     public static class Factory {
-		private static OdbcService provider;
-	    public static OdbcService getInstance() {
+		private static StructureODBCService provider;
+	    public static StructureODBCService getInstance() {
 	    	//
 	    	// Use the service loader to load an implementation if one is available
 	    	// Place a file called uk.ac.ox.oucs.ords.utilities.csv in src/main/resources/META-INF/services
@@ -60,8 +61,8 @@ public interface OdbcService {
 	    	// By default we load the Hibernate implementation.
 	    	//
 	    	if (provider == null){
-	    		ServiceLoader<OdbcService> ldr = ServiceLoader.load(OdbcService.class);
-	    		for (OdbcService service : ldr) {
+	    		ServiceLoader<StructureODBCService> ldr = ServiceLoader.load(StructureODBCService.class);
+	    		for (StructureODBCService service : ldr) {
 	    			// We are only expecting one
 	    			provider = service;
 	    		}
@@ -70,7 +71,7 @@ public interface OdbcService {
 	    	// If no service provider is found, use the default
 	    	//
 	    	if (provider == null){
-	    		provider = new OdbcServiceImpl();
+	    		provider = new StructureODBCServiceImpl();
 	    	}
 	    	
 	    	return provider;

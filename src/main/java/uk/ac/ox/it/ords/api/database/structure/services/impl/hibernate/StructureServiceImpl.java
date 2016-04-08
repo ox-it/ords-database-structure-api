@@ -44,7 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.ox.it.ords.api.database.structure.services.impl.AbstractStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.User;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;

@@ -33,7 +33,7 @@ import uk.ac.ox.it.ords.api.database.structure.dto.OdbcResponse;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
-import uk.ac.ox.it.ords.api.database.structure.services.OdbcService;
+import uk.ac.ox.it.ords.api.database.structure.services.StructureODBCService;
 
 /**
  * API for requesting and revoking ODBC access
@@ -109,14 +109,14 @@ public class Odbc {
 			//
 			// User has Modify rights, so create a read-write ODBC role
 			//
-			OdbcService.Factory.getInstance().addOdbcUserToDatabase(OdbcService.Factory.getInstance().getODBCUserName(databaseName), password, database, databaseName);	
+			StructureODBCService.Factory.getInstance().addOdbcUserToDatabase(StructureODBCService.Factory.getInstance().getODBCUserName(databaseName), password, database, databaseName);	
 
 		} else if (SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_VIEW(database.getLogicalDatabaseId()))){
 			
 			//
 			// User has View rights, so create a read-only ODBC role
 			//
-			OdbcService.Factory.getInstance().addReadOnlyOdbcUserToDatabase(OdbcService.Factory.getInstance().getODBCUserName(databaseName), password, database, databaseName);
+			StructureODBCService.Factory.getInstance().addReadOnlyOdbcUserToDatabase(StructureODBCService.Factory.getInstance().getODBCUserName(databaseName), password, database, databaseName);
 
 		} else {
 			
@@ -134,7 +134,7 @@ public class Odbc {
 		response.setServer(database.getDatabaseServer());
 		response.setDatabase(databaseName);
 		response.setPassword(password);
-		response.setUsername(OdbcService.Factory.getInstance().getODBCUserName(databaseName));
+		response.setUsername(StructureODBCService.Factory.getInstance().getODBCUserName(databaseName));
 		return Response.ok(response).build();
 	}
 	
@@ -185,7 +185,7 @@ public class Odbc {
 		//
 		// Remove all roles
 		//
-		OdbcService.Factory.getInstance().removeAllODBCRolesFromDatabase(database);
+		StructureODBCService.Factory.getInstance().removeAllODBCRolesFromDatabase(database);
 		
 		return Response.ok().build();
 	}
@@ -246,7 +246,7 @@ public class Odbc {
 		//
 		// TODO check role exists first? Or just let the service figure that one out?
 		//
-		OdbcService.Factory.getInstance().removeOdbcUserFromDatabase(role, database, databaseName);
+		StructureODBCService.Factory.getInstance().removeOdbcUserFromDatabase(role, database, databaseName);
 		
 		return Response.ok().build();
 	}

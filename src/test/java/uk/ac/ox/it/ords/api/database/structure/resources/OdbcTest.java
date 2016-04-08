@@ -48,7 +48,7 @@ import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissionSets;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
-import uk.ac.ox.it.ords.api.database.structure.services.OdbcService;
+import uk.ac.ox.it.ords.api.database.structure.services.StructureODBCService;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
 import uk.ac.ox.it.ords.security.model.Permission;
 import uk.ac.ox.it.ords.security.model.UserRole;
@@ -141,7 +141,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		// Check there are no special ODBC roles for the deleted database
 		//
-		assertTrue(OdbcService.Factory.getInstance().getAllODBCRolesForDatabase(server, databaseName).isEmpty());
+		assertTrue(StructureODBCService.Factory.getInstance().getAllODBCRolesForDatabase(server, databaseName).isEmpty());
 		
 		logout();
 	}
@@ -332,6 +332,13 @@ public class OdbcTest extends AbstractDatabaseTest {
 		} catch (Exception e) {
 			assertEquals("ERROR: permission denied for relation testTable", e.getMessage());
 		}
+		
+		//
+		// This should also fail
+		//
+		odbcResponse = getClient().path("/"+dbID+"/odbc/").delete();
+		assertEquals(403, odbcResponse.getStatus());
+		
 		logout();
 		
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
