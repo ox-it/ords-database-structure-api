@@ -59,6 +59,7 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
 	public void removeOdbcUserFromDatabase(String role, OrdsPhysicalDatabase database, String databaseName) throws Exception {
 		// TODO audit
 		this.revokeFromDatabase(role, database, databaseName);
+		this.dropRole(role, database, databaseName);
 	}
 	
 	@Override
@@ -206,6 +207,13 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
     		return String.format("ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT SELECT ON TABLES TO \"%s\";", SCHEMA_NAME, roleName);
     	}
     }
+    
+    private void dropRole(String odbcNameToRevoke, OrdsPhysicalDatabase database, String databaseName) throws Exception{
+    	String query = String.format("DROP OWNED BY \"%s\"", odbcNameToRevoke);
+    	this.runSQLStatement(query, database.getDatabaseServer(), databaseName);
+    	query = String.format("DROP ROLE \"%s\"", odbcNameToRevoke);
+    	this.runSQLStatement(query, database.getDatabaseServer(), databaseName);
+    }
 	
     private boolean revokeFromDatabase(String odbcNameToRevoke, OrdsPhysicalDatabase database, String databaseName) throws Exception {
 
@@ -327,5 +335,39 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
 				connection.close();
 			}
 		}
+	}
+
+
+	@Override
+	public void removeAllODBCRolesFromDatabase(OrdsPhysicalDatabase database) throws Exception {
+		List<String> roles = getAllODBCRolesForDatabase(database.getDatabaseServer(), database.getDbConsumedName());
+		for (String role : roles){
+			this.revokeFromDatabase(role, database, database.getDbConsumedName());
+			this.dropRole(role, database, database.getDbConsumedName());
+		}
+		
+	}
+	
+	/**
+	 * Gets all ODBC access roles for the specified database
+	 * @param database
+	 * @return
+	 * @throws Exception
+	 */
+	@Override
+	public List<String> getAllODBCRolesForDatabase(String databaseServer, String databaseName) throws Exception{
+		
+		ArrayList<String> roles = new ArrayList<String>();
+		//
+		// Collect all roles associated with this database
+		//
+		String roleName = "%_ords_" + databaseName;
+		
+		String query = String.format("select rolname from pg_roles where rolname like '%s'", roleName);
+		CachedRowSet results = this.runJDBCQuery(query, null, databaseServer, this.getORDSDatabaseName());
+		while(results.next()){
+			roles.add(results.getString(1));
+		}
+		return roles;
 	}
 }

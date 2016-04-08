@@ -139,6 +139,59 @@ public class Odbc {
 	}
 	
 	/**
+	 * Revokes ODBC access on a database for all roles
+	 * @param id the database id
+	 * @return
+	 * @throws Exception
+	 */
+	@DELETE
+	@Path("{id}/odbc/")
+	@Produces( MediaType.APPLICATION_JSON )
+	public Response removeAllOdbcRoles(
+			@PathParam("id") int id
+			) throws Exception{
+		
+		//
+		// Check we have a logged in user
+		//
+		if (SecurityUtils.getSubject() == null || !SecurityUtils.getSubject().isAuthenticated()){
+			return Response.status(401).build();
+		}
+		
+		//
+		// Obtain the database referred to
+		//
+		OrdsPhysicalDatabase database = null;
+		
+		//
+		// Check that it exists
+		//
+		try {
+			database = DatabaseStructureService.Factory.getInstance().getDatabaseMetaData(id);
+		} catch (Exception e) {
+			return Response.status(404).build();
+		}
+		if (database == null){
+			return Response.status(404).build();
+		}
+
+		//
+		// Check permission - we want more than just "modify" permission for this
+		//
+		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_DELETE(database.getLogicalDatabaseId()))){
+			return Response.status(403).build();			
+		}
+		
+		//
+		// Remove all roles
+		//
+		OdbcService.Factory.getInstance().removeAllODBCRolesFromDatabase(database);
+		
+		return Response.ok().build();
+	}
+
+	
+	/**
 	 * Revokes ODBC access on a database for a role
 	 * @param id the database id
 	 * @param role the name of the role to revoke

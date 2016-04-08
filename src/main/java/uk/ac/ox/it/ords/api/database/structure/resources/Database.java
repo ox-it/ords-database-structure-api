@@ -53,6 +53,7 @@ import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.MessageEntity;
+import uk.ac.ox.it.ords.api.database.structure.services.OdbcService;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 
 /**
@@ -287,6 +288,7 @@ public class Database extends AbstractResource{
 			return forbidden();		
 		}
 		try {
+			OdbcService.Factory.getInstance().removeAllODBCRolesFromDatabase(physicalDatabase);
 			databaseServiceInstance().deleteDatabase(dbId, false);
 			return Response.ok().build();
 		}

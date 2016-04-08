@@ -16,6 +16,7 @@
 
 package uk.ac.ox.it.ords.api.database.structure.services;
 
+import java.util.List;
 import java.util.ServiceLoader;
 
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
@@ -40,6 +41,11 @@ public interface OdbcService {
 	public abstract void removeOdbcUserFromDatabase(String role, OrdsPhysicalDatabase database, String databaseName)  throws Exception;
 
 	public abstract String getODBCUserName(String databaseName) throws Exception;
+		
+	public abstract void removeAllODBCRolesFromDatabase(OrdsPhysicalDatabase database)
+			throws Exception;
+	
+	public abstract List<String> getAllODBCRolesForDatabase(String databaseServer, String databaseName) throws Exception;
 		
 	/**
 	 * Factory for obtaining implementations
