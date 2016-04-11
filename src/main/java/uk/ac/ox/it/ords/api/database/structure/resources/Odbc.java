@@ -54,9 +54,9 @@ public class Odbc {
 	/**
 	 * Request ODBC access to a database for the current subject. This will generate new credentials, which
 	 * are returned to the requestor, but are not stored anywhere within ORDS.
-	 * @param id
+	 * @param id the database 
 	 * @return an ODBCResponse containing all the connection details needed by a client to connect to the database by ODBC
-	 * @throws Exception
+	 * @throws Exception if there is a problem obtaining ODBC access
 	 */
 	@ApiOperation(
 			value="Create ODBC connection details", 
@@ -157,8 +157,8 @@ public class Odbc {
 	/**
 	 * Revokes ODBC access on a database for all roles
 	 * @param id the database id
-	 * @return
-	 * @throws Exception
+	 * @return Response containing a status code
+	 * @throws Exception if there is a problem deleting ODBC access
 	 */
 	@DELETE
 	@Path("{id}/odbc/")
@@ -218,8 +218,8 @@ public class Odbc {
 	 * Revokes ODBC access on a database for a role
 	 * @param id the database id
 	 * @param role the name of the role to revoke
-	 * @return
-	 * @throws Exception
+	 * @return a Response containing a status code
+	 * @throws Exception if there is a problem removing the role
 	 */
 	@DELETE
 	@Path("{id}/odbc/{role}")

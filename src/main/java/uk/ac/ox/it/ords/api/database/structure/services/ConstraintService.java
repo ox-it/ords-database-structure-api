@@ -26,43 +26,44 @@ public interface ConstraintService {
 
 	/**
 	 * This function gets a named constraint metadata for a particular table in the database
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param constraintName
+	 * @param database the database
+	 * @param tableName the table
+	 * @param constraintName the constraint
+	 * @param staging if this is a staging database
 	 * @return A constraint class containing the contraint's metadata
-	 * @throws Exception
+	 * @throws Exception if there is a problem obtaining the constraint
 	 */
 	public MessageEntity getConstraint (OrdsPhysicalDatabase database, String tableName, String constraintName, boolean staging ) throws Exception;
 	
 	/**
 	 * This function creates new constraint with the metadata contained in the ConstraintRequest class
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param newConstraint
-	 * @throws Exception
+	 * @param database the database
+	 * @param tableName the table
+	 * @param constraintName the constraint
+	 * @param staging if this is a staging database
+	 * @param newConstraint the constraint to create
+	 * @throws Exception if there is a problem creating the constraint 
 	 */
 	public void createConstraint (OrdsPhysicalDatabase database, String tableName, String constraintName, ConstraintRequest newConstraint, boolean staging ) throws Exception;
 	
 	/**
 	 * Update a named constraint with the metadata in the ConstraintRequest object
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param constraintName
-	 * @param constraint
-	 * @throws Exception
+	 * @param database the database
+	 * @param tableName the table
+	 * @param constraintName the constraint
+	 * @param constraint the constraint to update
+	 * @param staging if this is a staging database
+	 * @throws Exception if there is a problem updating the constraint 
 	 */
 	public void updateConstraint ( OrdsPhysicalDatabase database, String tableName, String constraintName, ConstraintRequest constraint, boolean staging ) throws Exception;
 	
 	/**
 	 * Deletes a named constraint
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param constraint
-	 * @throws Exception
+	 * @param database the database
+	 * @param tableName the table
+	 * @param constraint the constraint to delete
+	 * @param staging if this is a staging database
+	 * @throws Exception if there is a problem deleting the constraint 
 	 */
 	public void deleteConstraint ( OrdsPhysicalDatabase database, String tableName, String constraint, boolean staging ) throws Exception;
 	

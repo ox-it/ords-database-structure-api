@@ -25,44 +25,45 @@ import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.IndexServ
 public interface IndexService {
 	
 	/**
-	 * 
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param indexName
-	 * @return
-	 * @throws Exception
+	 * Gets an index
+	 * @param database the database
+	 * @param tableName the table
+	 * @param indexName the index
+	 * @param staging if this applies to a staging database
+	 * @return the result
+	 * @throws Exception if there is a problem
 	 */
 	public MessageEntity getIndex ( OrdsPhysicalDatabase database, String tableName, String indexName, boolean staging ) throws Exception;
 	
 	/**
-	 * 
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param newIndex
-	 * @throws Exception
+	 * Creates an index
+	 * @param database the database
+	 * @param tableName the table
+	 * @param indexName the index
+	 * @param newIndex the new index
+	 * @param staging if this applies to a staging database
+	 * @throws Exception if there is a problem
 	 */
 	public void createIndex ( OrdsPhysicalDatabase database, String tableName, String indexName, IndexRequest newIndex, boolean staging ) throws Exception;
 	
 	/**
-	 * 
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param indexName
-	 * @param index
-	 * @throws Exception
+	 * Updates an index
+	 * @param database the database
+	 * @param tableName the table
+	 * @param indexName the index
+	 * @param index the index update request
+	 * @param staging if this applies to a staging database
+	 * @throws Exception if there is a problem
 	 */
 	public void updateIndex ( OrdsPhysicalDatabase database, String tableName, String indexName, IndexRequest index, boolean staging ) throws Exception;
 	
 	/**
-	 * 
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param index
-	 * @throws Exception
+	 * Deletes an index
+	 * @param database the database
+	 * @param tableName the table
+	 * @param indexName the index
+	 * @param staging if this applies to a staging database
+	 * @throws Exception if there is a problem
 	 */
 	public void deleteIndex ( OrdsPhysicalDatabase database, String tableName, String indexName, boolean staging ) throws Exception;
 

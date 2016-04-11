@@ -71,9 +71,9 @@ public class Database extends AbstractResource{
 	}
 
 	
-	/********************************************************
-	 * Database Resources
-	 ********************************************************/
+	// ********************************************************
+	// * Database Resources
+	// ********************************************************
 
 	@ApiOperation(
 			value="Gets a list of databases", 
@@ -618,12 +618,11 @@ public class Database extends AbstractResource{
 		
 	}
 	
+	// *******************************************************
+	// * Schema Designer Table Position
+	// * TODO: This needs it's own microservice really
+	// *******************************************************
 	
-	
-	/********************************************************
-	 * Schema Designer Table Position
-	 * TODO: This needs it's own microservice really
-	 *******************************************************/
 	@PUT
 	@Path("{id}/positions")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -660,9 +659,9 @@ public class Database extends AbstractResource{
 	
 	
 
-	/********************************************************
-	 * Table Resources
-	 ********************************************************/
+	// ********************************************************
+	// * Table Resources
+	// ********************************************************
 	
 	@ApiOperation(
 			value="Gets metadata for a table", 
@@ -817,9 +816,9 @@ public class Database extends AbstractResource{
 	
 	
 
-	/********************************************************
-	 * Column Resources
-	 ********************************************************/
+	// ********************************************************
+	// * Column Resources
+	// ********************************************************
 
 	@GET
 	@Path("{id}/table/{tablename}/column/{colname}/{staging}")
@@ -970,9 +969,9 @@ public class Database extends AbstractResource{
 	}
 	
 	
-	/********************************************************
-	 * Comment Resources
-	 ********************************************************/
+	// ********************************************************
+	// * Comment Resources
+	// ********************************************************
 
 	@GET
 	@Path("{id}/table/{tablename}/comment/{staging}")
@@ -1125,9 +1124,9 @@ public class Database extends AbstractResource{
 	}	
 
 	
-	/********************************************************
-	 * Constraint Resources
-	 ********************************************************/
+	// ********************************************************
+	// * Constraint Resources
+	// ********************************************************
 
 	@GET
 	@Path("{id}/table/{tablename}/constraint/{conname}/{staging}")
@@ -1279,9 +1278,9 @@ public class Database extends AbstractResource{
 	
 	
 	
-	/********************************************************
-	 * Index Resources
-	 ********************************************************/
+	// ********************************************************
+	// * Index Resources
+	// ********************************************************
 	
 	@GET
 	@Path("{id}/table/{tablename}/index/{indexname}/{staging}")

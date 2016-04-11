@@ -27,11 +27,11 @@ public interface StructureODBCService extends ODBCService {
 	
 	/**
 	 * Create a read-only ODBC connection role
-	 * @param role
-	 * @param odbcPassword
-	 * @param database
-	 * @param databaseName
-	 * @throws Exception
+	 * @param role the role to create
+	 * @param odbcPassword the ODBC password
+	 * @param database the database
+	 * @param databaseName the database name
+	 * @throws Exception if there is a problem adding the role
 	 */
 	public abstract void addReadOnlyOdbcUserToDatabase(String role, String odbcPassword,
 			OrdsPhysicalDatabase database, String databaseName)

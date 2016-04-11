@@ -120,9 +120,10 @@ public class DatabaseStructureRoleServiceImpl
 	}
 
 	/**
-	 * @param role
-	 * @param permissionString
-	 * @throws Exception
+	 * Creates a permission
+	 * @param role the role 
+	 * @param permissionString the permission
+	 * @throws Exception if there is a problem creating the permission
 	 */
 	protected void createPermission(String role, String permissionString) throws Exception{
 		Session session = this.sessionFactory.openSession();

@@ -27,12 +27,12 @@ public interface ColumnStructureService {
 	/**
 	 * Gets the metadata for a named column in a named table
 	 * 
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param columnName
-	 * @return
-	 * @throws Exception
+	 * @param database the database
+	 * @param tableName the table
+	 * @param columnName the column
+	 * @param staging whether this is a staging version
+	 * @return the column metadata
+	 * @throws Exception if there is a problem obtaining the column
 	 */
 	public ColumnRequest getColumnMetadata(OrdsPhysicalDatabase database,
 			String tableName, String columnName, boolean staging)
@@ -41,11 +41,12 @@ public interface ColumnStructureService {
 	/**
 	 * Creates a new column in a named table
 	 * 
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param column
-	 * @throws Exception
+	 * @param database the database
+	 * @param tableName the table
+	 * @param columnName the column name
+	 * @param column the column request
+	 * @param staging  whether this is a staging version
+	 * @throws Exception if there is a problem creating the column
 	 */
 	public void createColumn(OrdsPhysicalDatabase database, String tableName,
 			String columnName, ColumnRequest column, boolean staging) throws Exception;
@@ -53,12 +54,12 @@ public interface ColumnStructureService {
 	/**
 	 * Updates a named column with the properties in the ColumnRequest object
 	 * 
-	 * @param dbId
-	 * @param intance
-	 * @param tableName
-	 * @param columnName
-	 * @param column
-	 * @throws Exception
+	 * @param database the database
+	 * @param tableName the table
+	 * @param columnName the column
+	 * @param column the request
+	 * @param staging  whether this is a staging version
+	 * @throws Exception if there is a problem updating the column
 	 */
 	public void updateColumn(OrdsPhysicalDatabase database, String tableName,
 			String columnName, ColumnRequest column, boolean staging) throws Exception;
@@ -66,11 +67,11 @@ public interface ColumnStructureService {
 	/**
 	 * Deletes a named column
 	 * 
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param column
-	 * @throws Exception
+	 * @param database the database
+	 * @param tableName the table
+	 * @param columnName the column
+	 * @param staging  whether this is a staging version
+	 * @throws Exception if there is a problem deleting the column
 	 */
 	public void deleteColumn(OrdsPhysicalDatabase database, String tableName,
 			String columnName, boolean staging) throws Exception;

@@ -24,8 +24,8 @@ public interface DatabaseStructureRoleService {
 	
 	/**
 	 * Create the Owner role and their permissions; called once when a new project is created
-	 * @param groupId
-	 * @throws Exception
+	 * @param logicalDatabaseId the database to create permissions for
+	 * @throws Exception if there is a problem creating the permissions
 	 */
 	public void createInitialPermissions(int logicalDatabaseId) throws Exception;
 
