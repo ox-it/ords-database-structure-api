@@ -16,6 +16,9 @@
 
 package uk.ac.ox.it.ords.api.database.structure.resources;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+
 import java.math.BigInteger;
 import java.security.SecureRandom;
 
@@ -32,12 +35,14 @@ import org.apache.shiro.SecurityUtils;
 import uk.ac.ox.it.ords.api.database.structure.dto.OdbcResponse;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
+import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureAuditService;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.StructureODBCService;
 
 /**
  * API for requesting and revoking ODBC access
  */
+@Api(value="ODBC")
 @Path("/")
 public class Odbc {
 	
@@ -53,6 +58,11 @@ public class Odbc {
 	 * @return an ODBCResponse containing all the connection details needed by a client to connect to the database by ODBC
 	 * @throws Exception
 	 */
+	@ApiOperation(
+			value="Create ODBC connection details", 
+			notes="Returns a new set of connection details for this database for the current user", 
+			response = uk.ac.ox.it.ords.api.database.structure.dto.OdbcResponse.class
+			)
 	@POST
 	@Path("{id}/odbc/")
 	@Produces( MediaType.APPLICATION_JSON )
@@ -64,6 +74,7 @@ public class Odbc {
 		// Check we have a logged in user
 		//
 		if (SecurityUtils.getSubject() == null || !SecurityUtils.getSubject().isAuthenticated()){
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST structure/%s/odbc Not Authenticated", id));
 			return Response.status(401).build();
 		}
 		
@@ -93,6 +104,7 @@ public class Odbc {
 		// Check ODBC is enabled for this database for this user
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_REQUEST_ODBC_ACCESS(database.getLogicalDatabaseId()))){
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST structure/%s/odbc Not Permitted", id), database.getLogicalDatabaseId());
 			return Response.status(403).build();
 		}
 
@@ -123,6 +135,7 @@ public class Odbc {
 			//
 			// User has no permissions for this database so cannot have an ODBC role
 			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST structure/%s/odbc No Permitted Role", id), database.getLogicalDatabaseId());
 			return Response.status(403).build();
 		}
 		
@@ -135,6 +148,9 @@ public class Odbc {
 		response.setDatabase(databaseName);
 		response.setPassword(password);
 		response.setUsername(StructureODBCService.Factory.getInstance().getODBCUserName(databaseName));
+		
+		DatabaseStructureAuditService.Factory.getInstance().createODBCRole(database.getLogicalDatabaseId(), response.getUsername());
+		
 		return Response.ok(response).build();
 	}
 	
@@ -155,6 +171,8 @@ public class Odbc {
 		// Check we have a logged in user
 		//
 		if (SecurityUtils.getSubject() == null || !SecurityUtils.getSubject().isAuthenticated()){
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE structure/%s/odbc Not Authenticated", id));
+
 			return Response.status(401).build();
 		}
 		
@@ -179,6 +197,9 @@ public class Odbc {
 		// Check permission - we want more than just "modify" permission for this
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_DELETE(database.getLogicalDatabaseId()))){
+			
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE structure/%s/odbc Not permitted", id), database.getLogicalDatabaseId());
+
 			return Response.status(403).build();			
 		}
 		
@@ -186,6 +207,8 @@ public class Odbc {
 		// Remove all roles
 		//
 		StructureODBCService.Factory.getInstance().removeAllODBCRolesFromDatabase(database);
+		
+		DatabaseStructureAuditService.Factory.getInstance().removeODBCRoles(database.getLogicalDatabaseId());
 		
 		return Response.ok().build();
 	}
@@ -211,6 +234,9 @@ public class Odbc {
 		// Check we have a logged in user
 		//
 		if (SecurityUtils.getSubject() == null || !SecurityUtils.getSubject().isAuthenticated()){
+			
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE structure/%s/odbc/%s Not authenticated", id, role));
+
 			return Response.status(401).build();
 		}
 		
@@ -240,13 +266,18 @@ public class Odbc {
 		// Check permission
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_MODIFY(database.getLogicalDatabaseId()))){
+			
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE structure/%s/odbc/%s Not permitted", id, role), database.getLogicalDatabaseId());
+
 			return Response.status(403).build();			
 		}
 		
 		//
-		// TODO check role exists first? Or just let the service figure that one out?
+		// Drop role
 		//
 		StructureODBCService.Factory.getInstance().removeOdbcUserFromDatabase(role, database, databaseName);
+		
+		DatabaseStructureAuditService.Factory.getInstance().removeODBCRole(database.getLogicalDatabaseId(), role);
 		
 		return Response.ok().build();
 	}

@@ -51,6 +51,7 @@ import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.TableRenameRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissions;
+import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureAuditService;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.MessageEntity;
 import uk.ac.ox.it.ords.api.database.structure.services.StructureODBCService;
@@ -58,9 +59,7 @@ import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 
 /**
  * The REST API for database structure
- * @Refactor split this into separate classes handling their concerns
- * @author scottw
- *
+ * TODO split this into separate classes handling their concerns
  */
 @Api(value="Database Structure")
 @Path("/")
@@ -85,17 +84,20 @@ public class Database extends AbstractResource{
 	@GET
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response getDatabases ( ) {
-		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_VIEW_PUBLIC)) {
-			return forbidden();
-		}
-		List<OrdsPhysicalDatabase> databaseList;
+		
+		//
+		// Note the actual security check is performed as part of the getDatabaseList() operation,
+		// which will only return the databases that are visible for the current subject
+		//
+		
 		try {
-			databaseList = databaseServiceInstance().getDatabaseList();
+			List<OrdsPhysicalDatabase> databaseList = databaseServiceInstance().getDatabaseList();
+			return Response.ok(databaseList).build();
 		}
 		catch ( Exception e ) {
 			return this.handleException(e);
 		}
-		return Response.ok(databaseList).build();
+		
 	}
 	
 	@ApiOperation(
@@ -124,6 +126,12 @@ public class Database extends AbstractResource{
 		//
 		if (!SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+			
+			//
+			// Audit attempt made
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord( String.format("GET structure/%s/ Not Permitted", dbId), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -152,12 +160,24 @@ public class Database extends AbstractResource{
 		OrdsPhysicalDatabase newDatabase;
 		if ( !SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_CREATE)) {
+			
+			//
+			// Audit attempt made
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord("POST structure/ Not Permitted");
+
 			return forbidden();
 		}
 		try {
 			newDatabase =  databaseServiceInstance().createNewDatabase(databaseDTO);
 		    //UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 		    //builder.path(Integer.toString(newDatabase.getPhysicalDatabaseId()));
+			
+			//
+			// Audit creation
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createDatabase(newDatabase.getLogicalDatabaseId());
+			
 		    return Response.status(Response.Status.CREATED).entity(newDatabase).build();
 		}
 		catch ( Exception e ) {
@@ -190,10 +210,22 @@ public class Database extends AbstractResource{
 
 		if ( !SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_CREATE)) {
+			
+			//
+			// Audit attempt made
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST structure/%s/ Not Permitted", id), templateDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		if ( !SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_VIEW(templateDatabase.getLogicalDatabaseId()))) {
+			
+			//
+			// Audit attempt made
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST structure/%s/ Not Permitted", id), templateDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -201,6 +233,13 @@ public class Database extends AbstractResource{
 			newDatabase =  databaseServiceInstance().createNewDatabaseFromExisting(id, databaseDTO);
 		    //UriBuilder builder = uriInfo.getAbsolutePathBuilder();
 		    //builder.path(Integer.toString(newDatabase.getPhysicalDatabaseId()));
+			
+			
+			//
+			// Audit database creation
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createDatabase(newDatabase.getLogicalDatabaseId());
+			
 		    return Response.status(Response.Status.CREATED).entity(newDatabase).build();
 		}
 		catch ( Exception e ) {
@@ -245,16 +284,40 @@ public class Database extends AbstractResource{
 			return Response.status(404).build();
 		}
 		
+		//
+		// Given the two databases exists, we now need to check whether the current
+		// subject has MODIFY permissions for both of them
+		//
+		
 		if ( !SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_MODIFY(target.getLogicalDatabaseId()))) {
+			
+			//
+			// Audit attempt made
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("PUT structure/%s/ Not Permitted", id), target.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		if ( !SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_MODIFY(source.getLogicalDatabaseId()))) {
+			
+			//
+			// Audit attempt made
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("PUT structure/%s/ Not Permitted", id), target.getLogicalDatabaseId());
+
 			return forbidden();
 		}
+		
+		//
+		// Perform the merge
+		//
 		try {
 			OrdsPhysicalDatabase merged = databaseServiceInstance().mergeInstanceToMain(source, target);
+
+			// TODO audit this action
+			
 			return Response.ok().entity(merged).build();
 		}
 		catch(Exception e ) {
@@ -283,13 +346,41 @@ public class Database extends AbstractResource{
 			return Response.status(404).build();
 		}
 		
+		//
+		// Check whether the current subject has DELETE permission
+		//
 		if (!SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_DELETE(physicalDatabase.getLogicalDatabaseId()))) {
+			
+			//
+			// Audit attempt made
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE structure/%s/ Not Permitted", dbId), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();		
 		}
+		
+		//
+		// Perform the delete. First all ODBC roles connected to the database are removed,
+		// then the actual database is deleted - both the metadata, and then dropping the DB
+		// itself.
+		//
 		try {
+			//
+			// Drop roles
+			//
 			StructureODBCService.Factory.getInstance().removeAllODBCRolesFromDatabase(physicalDatabase);
+			
+			//
+			// Perform delete
+			//
 			databaseServiceInstance().deleteDatabase(dbId, false);
+			
+			//
+			// Audit deletion
+			//
+			DatabaseStructureAuditService.Factory.getInstance().deleteDatabase(physicalDatabase.getLogicalDatabaseId());
+
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -329,18 +420,31 @@ public class Database extends AbstractResource{
 			return Response.status(404).build();
 		}		
 
-		TableList tableList;
+		//
+		// Ensure that the current subject is allowed to view this database
+		//
+		// TODO check that this works for databases flagged as public when using
+		// an unauthenticated session
+		//
 		if (!SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
+			
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("GET structure/%s/staging Not Permitted", dbId), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
+		
+		//
+		// Fetch the metadata
+		//
 		try {
-			tableList =  databaseServiceInstance().getDatabaseTableList(dbId, true);
+			TableList tableList =  databaseServiceInstance().getDatabaseTableList(dbId, true);
+			return Response.ok(tableList).build();
 		}
 		catch ( Exception e ) {
 			return this.handleException(e);
 		}
-		return Response.ok(tableList).build();
+
 	}
 	
 	@ApiOperation(
@@ -371,13 +475,32 @@ public class Database extends AbstractResource{
 			return Response.status(404).build();
 		}
 		
+		//
+		// Check the subject is permitted to do this
+		//
 		if (!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())) {
+			
+			//
+			// Audit attempt made
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST structure/%s/staging Not Permitted", dbId), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();		
 		}
+		
+		//
+		// Create the staging database, and return its URL in the Location header
+		//
 		try {
-			String databaseName = databaseServiceInstance().createNewStagingDatabase(dbId);
+			databaseServiceInstance().createNewStagingDatabase(dbId);
 		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
-		    //builder.path(databaseName);
+		    builder.path("staging");
+		    
+		    //
+		    // Audit database creation
+		    //
+		    DatabaseStructureAuditService.Factory.getInstance().createDatabase(physicalDatabase.getLogicalDatabaseId());
+		    
 		    return Response.created(builder.build()).build();
 		}
 		catch ( Exception e ) {
@@ -413,10 +536,20 @@ public class Database extends AbstractResource{
 		}
 		
 		if (!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())) {
+			
+			//
+			// Audit attempt made
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("PUT structure/%s/staging Not Permitted", dbId), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();		
 		}
+		
 		try {
 			databaseServiceInstance().mergeStagingToActual(dbId);
+			
+			// TODO audit this action
+			
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
@@ -460,10 +593,23 @@ public class Database extends AbstractResource{
 		
 		if (!SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_DELETE(physicalDatabase.getLogicalDatabaseId()))) {
+			
+			//
+			// Audit attempt made
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE structure/%s/staging Not Permitted", dbId), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();		
 		}
+		
 		try {
 			databaseServiceInstance().deleteDatabase(dbId, true);
+			
+			//
+			// Audit deletion
+			//
+			DatabaseStructureAuditService.Factory.getInstance().deleteDatabase(physicalDatabase.getLogicalDatabaseId());
+			
 			return Response.ok().build();
 		}
 		catch ( Exception e ) {
