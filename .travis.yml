@@ -1,6 +1,6 @@
 language: java
-services:
-  - postgresql
+addons:
+  postgresql: "9.4"
 before_script:
   - psql -c 'create user ords superuser;' -U postgres
   - psql -c 'create database ordstest owner ords;' -U postgres
