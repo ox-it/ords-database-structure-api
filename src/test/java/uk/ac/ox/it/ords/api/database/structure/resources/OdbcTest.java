@@ -39,6 +39,7 @@ import org.hibernate.criterion.Restrictions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.ColumnRequest;
@@ -503,6 +504,8 @@ public class OdbcTest extends AbstractDatabaseTest {
 	 * @throws Exception
 	 */
 	@Test
+	@Ignore // we need to add some more config to travis to automatically set up PG with passwords on to test this
+	        // automatically; right now, just periodically test this locally until its set up.
 	public void resetRole() throws Exception{
 		
 		//
