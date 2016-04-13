@@ -38,19 +38,16 @@ public class StructureODBCServiceImpl extends ODBCServiceImpl implements Structu
 	public void addReadOnlyOdbcUserToDatabase(String role, String odbcPassword, OrdsPhysicalDatabase database, String databaseName) throws Exception{
 		createNewRole(role, odbcPassword, database, databaseName);
 		provideReadAccessToDB(role, odbcPassword, database, databaseName);
-		//TODO audit
 	}
 	
 	@Override
 	public void addOdbcUserToDatabase(String role, String odbcPassword, OrdsPhysicalDatabase database, String databaseName) throws Exception{
 		createNewRole(role, odbcPassword, database, databaseName);
 		provideWriteAccessToDB(role, odbcPassword, database, databaseName);
-		//TODO audit
 	}
 
 	@Override
 	public void removeOdbcUserFromDatabase(String role, OrdsPhysicalDatabase database, String databaseName) throws Exception {
-		// TODO audit
 		this.removeRole(role, database.getDatabaseServer(), databaseName);
 	}
 	

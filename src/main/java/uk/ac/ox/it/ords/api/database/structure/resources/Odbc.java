@@ -74,6 +74,10 @@ public class Odbc {
 		// Check we have a logged in user
 		//
 		if (SecurityUtils.getSubject() == null || !SecurityUtils.getSubject().isAuthenticated()){
+			
+			//
+			// If we don't, audit the attempt, and return a 401
+			//
 			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST structure/%s/odbc Not Authenticated", id));
 			return Response.status(401).build();
 		}
@@ -104,6 +108,10 @@ public class Odbc {
 		// Check ODBC is enabled for this database for this user
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_REQUEST_ODBC_ACCESS(database.getLogicalDatabaseId()))){
+
+			//
+			// If not, audit the attempt and return 403
+			//
 			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST structure/%s/odbc Not Permitted", id), database.getLogicalDatabaseId());
 			return Response.status(403).build();
 		}
@@ -149,6 +157,9 @@ public class Odbc {
 		response.setPassword(password);
 		response.setUsername(StructureODBCService.Factory.getInstance().getODBCUserName(databaseName));
 		
+		//
+		// Add an audit record for this event
+		//
 		DatabaseStructureAuditService.Factory.getInstance().createODBCRole(database.getLogicalDatabaseId(), response.getUsername());
 		
 		return Response.ok(response).build();
@@ -171,8 +182,10 @@ public class Odbc {
 		// Check we have a logged in user
 		//
 		if (SecurityUtils.getSubject() == null || !SecurityUtils.getSubject().isAuthenticated()){
+			//
+			// If not, audit the attempt and return 401
+			//
 			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE structure/%s/odbc Not Authenticated", id));
-
 			return Response.status(401).build();
 		}
 		
@@ -194,10 +207,14 @@ public class Odbc {
 		}
 
 		//
-		// Check permission - we want more than just "modify" permission for this
+		// Check permission - we want more than just "modify" permission for this. We may want to
+		// define a specific permission in future, but DATABASE_DELETE seems sufficient.
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_DELETE(database.getLogicalDatabaseId()))){
 			
+			//
+			// If not permitted, create an audit record and return 403
+			//
 			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE structure/%s/odbc Not permitted", id), database.getLogicalDatabaseId());
 
 			return Response.status(403).build();			
@@ -208,6 +225,9 @@ public class Odbc {
 		//
 		StructureODBCService.Factory.getInstance().removeAllODBCRolesFromDatabase(database);
 		
+		//
+		// Add an audit record for the change
+		//
 		DatabaseStructureAuditService.Factory.getInstance().removeODBCRoles(database.getLogicalDatabaseId());
 		
 		return Response.ok().build();
@@ -235,8 +255,10 @@ public class Odbc {
 		//
 		if (SecurityUtils.getSubject() == null || !SecurityUtils.getSubject().isAuthenticated()){
 			
+			//
+			// If not, add an audit record for the attempt, and return 401
+			//
 			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE structure/%s/odbc/%s Not authenticated", id, role));
-
 			return Response.status(401).build();
 		}
 		
@@ -267,8 +289,10 @@ public class Odbc {
 		//
 		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_MODIFY(database.getLogicalDatabaseId()))){
 			
+			//
+			// If not, create an audit record for the attempt, and return 403
+			//
 			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE structure/%s/odbc/%s Not permitted", id, role), database.getLogicalDatabaseId());
-
 			return Response.status(403).build();			
 		}
 		
@@ -277,6 +301,9 @@ public class Odbc {
 		//
 		StructureODBCService.Factory.getInstance().removeOdbcUserFromDatabase(role, database, databaseName);
 		
+		//
+		// Create an audit record for the change
+		// 
 		DatabaseStructureAuditService.Factory.getInstance().removeODBCRole(database.getLogicalDatabaseId(), role);
 		
 		return Response.ok().build();

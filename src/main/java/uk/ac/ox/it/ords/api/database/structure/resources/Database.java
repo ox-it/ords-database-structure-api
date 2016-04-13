@@ -316,8 +316,7 @@ public class Database extends AbstractResource{
 		try {
 			OrdsPhysicalDatabase merged = databaseServiceInstance().mergeInstanceToMain(source, target);
 
-			// TODO audit this action
-			
+			// TODO audit this action			
 			return Response.ok().entity(merged).build();
 		}
 		catch(Exception e ) {
@@ -645,6 +644,12 @@ public class Database extends AbstractResource{
 		
 		if ( !SecurityUtils.getSubject().isPermitted(
 				DatabaseStructurePermissions.DATABASE_MODIFY(physicalDatabase.getLogicalDatabaseId()))) {
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("PUT /%s/positions", dbId), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		try {
@@ -692,6 +697,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if (!canViewDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("GET /%s/table/%s/%b", dbId,tableName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		try {
@@ -736,6 +747,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if (!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST /%s/table/%s/%b", dbId,tableName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		try {
@@ -770,6 +787,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("PUT /%s/table/%s/%b", dbId,tableName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		try {
@@ -802,6 +825,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE /%s/table/%s/%b", dbId,tableName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -839,8 +868,15 @@ public class Database extends AbstractResource{
 			return Response.status(404).build();
 		}
 		
+		//
+		// Check permissions
+		// 
 		if (!SecurityUtils.getSubject().isPermitted(DatabaseStructurePermissions.DATABASE_VIEW(physicalDatabase.getLogicalDatabaseId()))) {
-			//TODO add audit service
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("GET /%s/table/%s/column/%s/%b", dbId,tableName,columnName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
 			return Response.status(403).build();
 		}
 		try {
@@ -882,6 +918,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST /%s/table/%s/column/%s/%b", dbId,tableName,columnName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -923,6 +965,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("PUT /%s/table/%s/column/%s/%b", dbId,tableName,columnName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -956,6 +1004,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE /%s/table/%s/column/%s/%b", dbId,tableName,columnName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -992,6 +1046,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canViewDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("GET /%s/table/%s/comment/%b", dbId,tableName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -1030,6 +1090,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST /%s/table/%s/commen/%b", dbId,tableName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -1065,6 +1131,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canViewDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("GET /%s/table/%s/column/%s/comment/%b", dbId,tableName,columnName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -1104,6 +1176,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST|PUT /%s/table/%s/column/%s/comment/%b", dbId,tableName,columnName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -1148,6 +1226,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canViewDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("GET /%s/table/%s/constraint/%s/%b", dbId,tableName,constraintName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -1190,6 +1274,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST /%s/table/%s/constraint/%s/%b", dbId,tableName,constraintName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -1228,6 +1318,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("PUT /%s/table/%s/constraint/%s/%b", dbId,tableName,constraintName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -1263,6 +1359,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE /%s/table/%s/constraint/%s/%b", dbId,tableName,constraintName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -1303,6 +1405,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canViewDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("GET /%s/table/%s/index/%s/%b", dbId,tableName,indexName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -1340,6 +1448,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("POST /%s/table/%s/index/%s/%b", dbId,tableName,indexName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -1376,6 +1490,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("PUT /%s/table/%s/index/%s/%b", dbId,tableName,indexName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
@@ -1410,6 +1530,12 @@ public class Database extends AbstractResource{
 		}
 		
 		if(!canModifyDatabase(physicalDatabase.getLogicalDatabaseId())){
+			
+			//
+			// If not permitted, create an audit record and return 403
+			//
+			DatabaseStructureAuditService.Factory.getInstance().createNotAuthRecord(String.format("DELETE /%s/table/%s/index/%s/%b", dbId,tableName,indexName, staging.getValue()), physicalDatabase.getLogicalDatabaseId());
+
 			return forbidden();
 		}
 		
