@@ -18,6 +18,7 @@ package uk.ac.ox.it.ords.api.database.structure.resources;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import javax.ws.rs.core.Response;
 
@@ -47,6 +48,7 @@ public class StagingTest extends AbstractDatabaseTestRunner {
 		// Now make a staging version
 		response = getClient().path("/"+physicalDatabaseId+"/staging").post(dbr);
 		assertEquals(201, response.getStatus());
+		assertTrue(response.getLocation().getPath().endsWith("/staging"));
 
 		// Check it exists
 		response = getClient().path("/"+physicalDatabaseId+"/staging").get();

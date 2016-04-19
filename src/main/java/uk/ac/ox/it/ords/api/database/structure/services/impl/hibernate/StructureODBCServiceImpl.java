@@ -16,28 +16,21 @@
 
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 import javax.sql.rowset.CachedRowSet;
-import javax.sql.rowset.RowSetProvider;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
-import uk.ac.ox.it.ords.api.database.structure.services.OdbcService;
-import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
+import uk.ac.ox.it.ords.api.database.structure.services.StructureODBCService;
+import uk.ac.ox.it.ords.security.services.impl.hibernate.ODBCServiceImpl;
 
-public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService {
+public class StructureODBCServiceImpl extends ODBCServiceImpl implements StructureODBCService {
 
-	private static Logger log = Logger.getLogger(OdbcServiceImpl.class);
+	private static Logger log = Logger.getLogger(StructureODBCServiceImpl.class);
 	
     public static final String SCHEMA_NAME = "public";
 
@@ -45,20 +38,17 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
 	public void addReadOnlyOdbcUserToDatabase(String role, String odbcPassword, OrdsPhysicalDatabase database, String databaseName) throws Exception{
 		createNewRole(role, odbcPassword, database, databaseName);
 		provideReadAccessToDB(role, odbcPassword, database, databaseName);
-		//TODO audit
 	}
 	
 	@Override
 	public void addOdbcUserToDatabase(String role, String odbcPassword, OrdsPhysicalDatabase database, String databaseName) throws Exception{
 		createNewRole(role, odbcPassword, database, databaseName);
 		provideWriteAccessToDB(role, odbcPassword, database, databaseName);
-		//TODO audit
 	}
 
 	@Override
 	public void removeOdbcUserFromDatabase(String role, OrdsPhysicalDatabase database, String databaseName) throws Exception {
-		// TODO audit
-		this.revokeFromDatabase(role, database, databaseName);
+		this.removeRole(role, database.getDatabaseServer(), databaseName);
 	}
 	
 	@Override
@@ -68,7 +58,16 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
 		// This is so that we have one role per user per database, which isn't shared
 		// with other databases; we therefore don't need to worry about storing and updating 
 		// passwords.
-		return this.getODBCUserName() + "_" + databaseName;
+		return new StructureServiceImpl().getODBCUserName() + "_" + databaseName;
+	}
+	
+	@Override
+	public void removeAllODBCRolesFromDatabase(OrdsPhysicalDatabase database) throws Exception {
+		List<String> roles = getAllODBCRolesForDatabase(database.getDatabaseServer(), database.getDbConsumedName());
+		for (String role : roles){
+			this.revokeFromDatabase(role, database.getDatabaseServer(), database.getDbConsumedName());
+			this.removeRole(role, database.getDatabaseServer(), database.getDbConsumedName());
+		}
 	}
 	
     /**
@@ -96,7 +95,9 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
         				roleName,
         				userPassword);
         		try {
-        			runSQLStatement(command, database.getDatabaseServer(), databaseName);
+        			List<String> commandList = new ArrayList<String>();
+        			commandList.add(command);
+        			runSQLStatements(commandList, database.getDatabaseServer(), databaseName);
         		} catch (Exception e) {
         			throw(e);
         		}
@@ -112,7 +113,9 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
         				roleName,
         				userPassword);
         		try {
-        			runSQLStatement(command, database.getDatabaseServer(), databaseName);
+        			List<String> commandList = new ArrayList<String>();
+        			commandList.add(command);
+        			runSQLStatements(commandList, database.getDatabaseServer(), databaseName);
         		} catch (Exception e) {
         			throw(e);
         		}
@@ -161,7 +164,7 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
     	if (doesRoleExist(odbcName, database, databaseName)) {    	
 	    	// First revoke access. This is just to make sure things are clean before we
             // continue.
-	    	revokeFromDatabase(odbcName, database, databaseName);
+	    	revokeFromDatabase(odbcName, database.getDatabaseServer(), databaseName);
     	}
     	else {
     		createNewRole(odbcName, odbcPassword, database, databaseName);
@@ -172,8 +175,10 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
     	this.runSQLStatements(commandList, database.getDatabaseServer(), databaseName);
 
     	// Some commands can only be run as a Postgres admin - there is one command in this work package like that, so run that here
-    	String s = getSpecialAccessStatements(odbcName, write);
-    	this.runSQLStatement(s, database.getDatabaseServer(), databaseName);
+    	String command = getSpecialAccessStatements(odbcName, write);
+		commandList.clear();
+		commandList.add(command);
+		runSQLStatements(commandList, database.getDatabaseServer(), databaseName);
     	return true;
     }
     
@@ -206,28 +211,6 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
     		return String.format("ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT SELECT ON TABLES TO \"%s\";", SCHEMA_NAME, roleName);
     	}
     }
-	
-    private boolean revokeFromDatabase(String odbcNameToRevoke, OrdsPhysicalDatabase database, String databaseName) throws Exception {
-
-    	List<String> commandList = getRevokeStatement(odbcNameToRevoke, database, databaseName);
-    	runSQLStatements(commandList, database.getDatabaseServer(), databaseName);
-    	// Some commands can only be run as a Postgres admin - there is one command in this work package like that, so run that here
-    	String s = getSpecialRevokeStatement(odbcNameToRevoke);
-    	runSQLStatement(s, database.getDatabaseServer(), databaseName);
-    	return true;
-    }
-    
-    //Need to determine what to revoke with regards to the schema authorisation - not enough to just revoke access to the db
-    private List<String> getRevokeStatement(String roleName, OrdsPhysicalDatabase database, String databaseName) throws ClassNotFoundException, SQLException {
-
-
-    	List<String> commandList = new ArrayList<String>(); 
-
-    	commandList.add(String.format("REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA \"%s\" FROM \"%s\";", SCHEMA_NAME, roleName));
-    	commandList.add(String.format("revoke all on schema %s from \"%s\";", SCHEMA_NAME, roleName));
-    	commandList.add(String.format("revoke connect on database \"%s\" from \"%s\";", databaseName, roleName));
-    	return commandList;
-    }
     
     protected List<String> getReadAccessGrantStatement(String roleName, OrdsPhysicalDatabase database, String databaseName) throws ClassNotFoundException, SQLException {
     	List<String> commandList = new ArrayList<String>();
@@ -242,90 +225,7 @@ public class OdbcServiceImpl extends StructureServiceImpl implements OdbcService
         commandList.add(String.format("GRANT usage, create ON SCHEMA %s TO \"%s\";", SCHEMA_NAME, roleName));
         return commandList;
     }
-    
-    protected String getSpecialRevokeStatement(String roleName) {
-    	return String.format("alter default privileges in schema %s revoke all on tables from \"%s\" ;", SCHEMA_NAME, roleName);
-    }
-    
-    //
-    // Utility Methods. 
-    // @Refactor these are just the same as in StructureServiceImpl, but we run them as ORDS and not as
-    // the current principal; the reason being that these require a higher level of access. We may want to parameterize the
-    // methods in StructureServiceImpl to support this and reduce code duplication.
-    //
-    
-	protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,
-			String server, String databaseName) throws Exception {
-		Connection connection = null;
-		Properties connectionProperties = new Properties();
-		PreparedStatement preparedStatement = null;
-		connectionProperties.put("user", this.getORDSDatabaseUser());
-		connectionProperties.put("password", this.getORDSDatabasePassword());
-		String connectionURL = "jdbc:postgresql://" + server + "/"
-				+ databaseName;
-		try {
-			connection = DriverManager.getConnection(connectionURL,
-					connectionProperties);
-			preparedStatement = connection.prepareStatement(query);
-			if (query.toLowerCase().startsWith("select")) {
-				ResultSet result = preparedStatement.executeQuery();
-				CachedRowSet rowSet = RowSetProvider.newFactory()
-						.createCachedRowSet();
-				rowSet.populate(result);
-				log.debug("prepareAndExecuteStatement:return result");
-				return rowSet;
-			} else {
-				preparedStatement.execute();
-				log.debug("prepareAndExecuteStatement:return null");
-				return null;
-			}
 
-		} catch (SQLException e) {
-			log.error("Error with this command", e);
-			log.error("Query:" + query);
-			throw e;
-		} finally {
-			if (preparedStatement != null) {
-				preparedStatement.close();
-			}
-			if (connection != null) {
-				connection.close();
-			}
-		}
 
-	}
-    
-	protected void runSQLStatement(String statement, String server, String databaseName) throws Exception{
-		ArrayList<String> statements = new ArrayList<String>();
-		statements.add(statement);
-		runSQLStatements(statements, server, databaseName);
-	}
-	
-	protected void runSQLStatements(List<String> statements, String server,
-			String databaseName) throws Exception {
-		Connection connection = null;
-		Properties connectionProperties = new Properties();
-		PreparedStatement preparedStatement = null;
-			Configuration config = MetaConfiguration.getConfiguration();
-			connectionProperties.put("user", config.getString(StructureServiceImpl.ORDS_DATABASE_USER));
-			connectionProperties.put("password", config.getString(StructureServiceImpl.ORDS_DATABASE_PASSWORD));
-		String connectionURL = "jdbc:postgresql://" + server + "/"
-				+ databaseName;
-		try {
-			connection = DriverManager.getConnection(connectionURL,
-					connectionProperties);
-			for (String statement: statements ) {
-				preparedStatement = connection.prepareStatement(statement);
-				preparedStatement.execute();
-			}
-		}
-		finally {
-			if (preparedStatement != null) {
-				preparedStatement.close();
-			}
-			if (connection != null) {
-				connection.close();
-			}
-		}
-	}
+
 }

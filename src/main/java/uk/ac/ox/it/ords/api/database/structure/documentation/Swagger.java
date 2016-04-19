@@ -28,7 +28,7 @@ public class Swagger extends Swagger2Feature {
 	
 	public Swagger(){
 		super();
-		this.setBasePath("/api/1.0/structure/");
+		this.setBasePath("/api/1.0/structure");
 		this.setDescription("API for managing ORDS databases");
 		this.setTitle("ORDS Database API");
 		this.setVersion("1.0");

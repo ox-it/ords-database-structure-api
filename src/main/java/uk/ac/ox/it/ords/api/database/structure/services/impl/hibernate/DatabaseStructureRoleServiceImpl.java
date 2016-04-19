@@ -23,7 +23,6 @@ import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePermissionSets;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureRoleService;
 import uk.ac.ox.it.ords.security.model.Permission;
@@ -45,7 +44,7 @@ public class DatabaseStructureRoleServiceImpl
 	}
 
 	@Override
-	public void createInitialPermissions(OrdsDB database) throws Exception {
+	public void createInitialPermissions(int logicalDatabaseId) throws Exception {
 		Session session = this.sessionFactory.openSession();
 		
 		try {
@@ -56,14 +55,14 @@ public class DatabaseStructureRoleServiceImpl
 			//
 			UserRole owner = new UserRole();
 			owner.setPrincipalName(SecurityUtils.getSubject().getPrincipal().toString());
-			owner.setRole(getPrivateUserRole("databaseowner", database.getLogicalDatabaseId()));
+			owner.setRole(getPrivateUserRole("databaseowner", logicalDatabaseId));
 			session.save(owner);
 			session.getTransaction().commit();
 			
 			//
 			// Create the permissions for roles associated with the project
 			//
-			createPermissionsForDatabase(database);
+			createPermissionsForDatabase(logicalDatabaseId);
 
 		} catch (HibernateException e) {
 			log.error("Error creating Project", e);
@@ -94,36 +93,37 @@ public class DatabaseStructureRoleServiceImpl
 	 * @param projectId
 	 * @throws Exception 
 	 */
-	private void createPermissionsForDatabase(OrdsDB database) throws Exception{
+	private void createPermissionsForDatabase(int logicalDatabaseId) throws Exception{
 		//
 		// Owner
 		//
-		String ownerRole = "databaseowner_"+database.getLogicalDatabaseId();
-		for (String permission : DatabaseStructurePermissionSets.getPermissionsForOwner(database.getLogicalDatabaseId())){
+		String ownerRole = "databaseowner_"+logicalDatabaseId;
+		for (String permission : DatabaseStructurePermissionSets.getPermissionsForOwner(logicalDatabaseId)){
 			createPermission(ownerRole, permission);			
 		}
 
 		//
 		// Contributor
 		//
-		String contributorRole = "databasecontributor_"+database.getLogicalDatabaseId();
-		for (String permission : DatabaseStructurePermissionSets.getPermissionsForContributor(database.getLogicalDatabaseId())){
+		String contributorRole = "databasecontributor_"+logicalDatabaseId;
+		for (String permission : DatabaseStructurePermissionSets.getPermissionsForContributor(logicalDatabaseId)){
 			createPermission(contributorRole, permission);			
 		}
 
 		//
 		// Viewer
 		//
-		String viewerRole = "databaseviewer_"+database.getLogicalDatabaseId();
-		for (String permission : DatabaseStructurePermissionSets.getPermissionsForViewer(database.getLogicalDatabaseId())){
+		String viewerRole = "databaseviewer_"+logicalDatabaseId;
+		for (String permission : DatabaseStructurePermissionSets.getPermissionsForViewer(logicalDatabaseId)){
 			createPermission(viewerRole, permission);			
 		}
 	}
 
 	/**
-	 * @param role
-	 * @param permissionString
-	 * @throws Exception
+	 * Creates a permission
+	 * @param role the role 
+	 * @param permissionString the permission
+	 * @throws Exception if there is a problem creating the permission
 	 */
 	protected void createPermission(String role, String permissionString) throws Exception{
 		Session session = this.sessionFactory.openSession();

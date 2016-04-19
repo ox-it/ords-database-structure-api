@@ -18,17 +18,16 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 
 import java.util.ServiceLoader;
 
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.DatabaseStructureRoleServiceImpl;
 
 public interface DatabaseStructureRoleService {
 	
 	/**
 	 * Create the Owner role and their permissions; called once when a new project is created
-	 * @param groupId
-	 * @throws Exception
+	 * @param logicalDatabaseId the database to create permissions for
+	 * @throws Exception if there is a problem creating the permissions
 	 */
-	public void createInitialPermissions(OrdsDB database) throws Exception;
+	public void createInitialPermissions(int logicalDatabaseId) throws Exception;
 
 	   public static class Factory {
 			private static DatabaseStructureRoleService provider;

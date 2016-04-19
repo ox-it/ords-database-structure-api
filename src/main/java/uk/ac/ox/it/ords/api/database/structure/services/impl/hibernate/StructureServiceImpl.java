@@ -44,7 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.ox.it.ords.api.database.structure.services.impl.AbstractStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.User;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
@@ -74,7 +73,7 @@ public class StructureServiceImpl extends AbstractStructureService {
 	/**
 	 * Gets the session factory for accessing the ords database
 	 * 
-	 * @return
+	 * @return the session factory
 	 */
 	public SessionFactory getOrdsDBSessionFactory() {
 		return sessionFactory;
@@ -83,10 +82,9 @@ public class StructureServiceImpl extends AbstractStructureService {
 	/**
 	 * Gets the session factory for a user's database
 	 * 
-	 * @param dbId
-	 * @param instance
-	 * @param userName
-	 * @param password
+	 * @param dbName the database
+	 * @param userName the user 
+	 * @param password the password
 	 * @return SessionFactory object
 	 */
 	public SessionFactory getUserDBSessionFactory(String dbName,
@@ -99,8 +97,8 @@ public class StructureServiceImpl extends AbstractStructureService {
 	/**
 	 * Returns the odbc username for the currently signed in user
 	 * 
-	 * @return
-	 * @throws Exception
+	 * @return the ODBC user name
+	 * @throws Exception if there is a problem
 	 */
 	public String getODBCUserName() throws Exception {
 		String principalName = SecurityUtils.getSubject().getPrincipal()
@@ -112,8 +110,8 @@ public class StructureServiceImpl extends AbstractStructureService {
 	/**
 	 * Returns the odbc password for the currently signed in user
 	 * 
-	 * @return
-	 * @throws ConfigurationException
+	 * @return the ODBC password
+	 * @throws ConfigurationException if there is a problem
 	 */
 	public String getODBCPassword() throws ConfigurationException {
 		return MetaConfiguration.getConfiguration().getString(
@@ -161,12 +159,13 @@ public class StructureServiceImpl extends AbstractStructureService {
 	/**
 	 * Returns true if the table exists in the given database
 	 * 
-	 * @param tableName
-	 * @param databaseName
-	 * @param userName
-	 * @param password
-	 * @return
-	 * @throws Exception
+	 * @param tableName the table
+	 * @param databaseName the database
+	 * @param databaseServer the database server
+	 * @param userName the user
+	 * @param password the user's password
+	 * @return true if the table exists
+	 * @throws Exception if there is a problem performing the check
 	 */
 	public boolean checkTableExists(String tableName, String databaseName, String databaseServer,
 			String userName, String password) throws Exception {
@@ -178,13 +177,14 @@ public class StructureServiceImpl extends AbstractStructureService {
 	/**
 	 * Returns true if the column exists in the given table and database
 	 * 
-	 * @param columnName
-	 * @param tableName
-	 * @param databaseName
-	 * @param userName
-	 * @param password
-	 * @return
-	 * @throws Exception
+	 * @param columnName the column
+	 * @param tableName the table
+	 * @param databaseName the database
+	 * @param databaseServer the database server
+	 * @param userName the user
+	 * @param password the user's password
+	 * @return true if the column exists
+	 * @throws Exception if there is a problem performing the check
 	 */
 	public boolean checkColumnExists(String columnName, String tableName,
 			String databaseName, String databaseServer, String userName, String password)
@@ -765,8 +765,8 @@ public class StructureServiceImpl extends AbstractStructureService {
 	/**
 	 * createParametersList: convenience function for creating a list
 	 * 
-	 * @param args
-	 * @return
+	 * @param args the list of parameters
+	 * @return List of parameters
 	 */
 	protected List<Object> createParameterList(Object... args) {
 		ArrayList<Object> parameters = new ArrayList<Object>();

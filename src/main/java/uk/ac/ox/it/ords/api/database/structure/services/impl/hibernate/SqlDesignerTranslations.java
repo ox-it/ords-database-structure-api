@@ -39,7 +39,7 @@ public class SqlDesignerTranslations {
      * the conversions possible
      *
      * @param dataType the datatype to be converted
-     * @refactor merge with other type translation utilities
+     * TODO merge with other type translation utilities
      * @return a Postgres-friendly datatype
      */
 	public static String convertDatatypeForPostgres(String dataType) {

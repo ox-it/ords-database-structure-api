@@ -26,7 +26,6 @@ import org.hibernate.service.ServiceRegistryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.SchemaDesignerTable;
 import uk.ac.ox.it.ords.api.database.structure.model.User;
@@ -51,7 +50,6 @@ public class HibernateUtils {
 	protected static String HIBERNATE_USER_CONFIGURATION_PROPERTY="ords.hibernate.user.configuration";
 
 	protected static void addMappings(Configuration configuration){
-		configuration.addAnnotatedClass(OrdsDB.class);
 		configuration.addAnnotatedClass(OrdsPhysicalDatabase.class);
 		configuration.addAnnotatedClass(SchemaDesignerTable.class);
 		configuration.addAnnotatedClass(User.class);

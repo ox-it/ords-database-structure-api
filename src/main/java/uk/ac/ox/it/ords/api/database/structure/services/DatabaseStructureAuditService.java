@@ -18,35 +18,34 @@ package uk.ac.ox.it.ords.api.database.structure.services;
 
 import java.util.ServiceLoader;
 
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
-import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.OdbcServiceImpl;
+import uk.ac.ox.it.ords.api.database.structure.services.impl.DatabaseStructureAuditServiceImpl;
 
-public interface OdbcService {
+public interface DatabaseStructureAuditService {
 	
-	/**
-	 * Create a read-only ODBC connection role
-	 * @param role
-	 * @param odbcPassword
-	 * @param database
-	 * @param databaseName
-	 * @throws Exception
-	 */
-	public abstract void addReadOnlyOdbcUserToDatabase(String role, String odbcPassword,
-			OrdsPhysicalDatabase database, String databaseName)
-			throws Exception;
+    /**
+     * Create audit message that the user is not authorised to perform a specific action
+     * @param request the action that is not authorised
+     */
+    public abstract void createNotAuthRecord(String request);
+    
+    public abstract void createNotAuthRecord(String request, int logicalDatabaseId);
+	
+	public abstract void createDatabase(int databaseId);
+	
+	public abstract void createODBCRole(int databaseId, String role);
 
-	public abstract void addOdbcUserToDatabase(String role, String password, OrdsPhysicalDatabase database, String databaseName) throws Exception;
+	public abstract void removeODBCRole(int databaseId, String role);
 
-	public abstract void removeOdbcUserFromDatabase(String role, OrdsPhysicalDatabase database, String databaseName)  throws Exception;
+	public abstract void removeODBCRoles(int databaseId);
+	
+	public abstract void deleteDatabase(int databaseId);
 
-	public abstract String getODBCUserName(String databaseName) throws Exception;
-		
 	/**
 	 * Factory for obtaining implementations
 	 */
     public static class Factory {
-		private static OdbcService provider;
-	    public static OdbcService getInstance() {
+		private static DatabaseStructureAuditService provider;
+	    public static DatabaseStructureAuditService getInstance() {
 	    	//
 	    	// Use the service loader to load an implementation if one is available
 	    	// Place a file called uk.ac.ox.oucs.ords.utilities.csv in src/main/resources/META-INF/services
@@ -54,8 +53,8 @@ public interface OdbcService {
 	    	// By default we load the Hibernate implementation.
 	    	//
 	    	if (provider == null){
-	    		ServiceLoader<OdbcService> ldr = ServiceLoader.load(OdbcService.class);
-	    		for (OdbcService service : ldr) {
+	    		ServiceLoader<DatabaseStructureAuditService> ldr = ServiceLoader.load(DatabaseStructureAuditService.class);
+	    		for (DatabaseStructureAuditService service : ldr) {
 	    			// We are only expecting one
 	    			provider = service;
 	    		}
@@ -64,10 +63,13 @@ public interface OdbcService {
 	    	// If no service provider is found, use the default
 	    	//
 	    	if (provider == null){
-	    		provider = new OdbcServiceImpl();
+	    		provider = new DatabaseStructureAuditServiceImpl();
 	    	}
 	    	
 	    	return provider;
 	    }
 	}
+
+	
+
 }

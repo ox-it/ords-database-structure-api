@@ -30,7 +30,6 @@ import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
 
 import uk.ac.ox.it.ords.api.database.structure.dto.DatabaseRequest;
-import uk.ac.ox.it.ords.api.database.structure.model.OrdsDB;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase.EntityType;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureRoleService;
@@ -228,14 +227,6 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		
 		return stagingName;
 	}
-	
-
-	@Override
-	public void updateStagingDatabase(int dbId, OrdsPhysicalDatabase update)
-			throws Exception {
-		// TODO Auto-generated method stub
-
-	}
 
 	@Override
 	public void mergeStagingToActual(int dbId)
@@ -375,7 +366,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 				quote_ident(userName));
 		this.runSQLStatementOnOrdsDB(clonedb);
 
-		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(getLogicalDatabase(newDb.getLogicalDatabaseId()));
+		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(newDb.getLogicalDatabaseId());
 		return newDb;
 	
 	}
@@ -415,7 +406,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		String server = db.getDatabaseServer();
 		this.runJDBCQuery(createSequence, null, server, dbName);
 
-		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(getLogicalDatabase(db.getLogicalDatabaseId()));
+		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(db.getLogicalDatabaseId());
 
 		return db;
 		
@@ -458,33 +449,6 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		}
 
 	}
-
-	@Override
-	public OrdsDB getLogicalDatabase(int dbId) throws Exception {
-
-		Transaction transaction = null;
-		Session session = this.getOrdsDBSessionFactory().openSession();
-		OrdsDB ordsdb = null;
-		try {
-			transaction = session.beginTransaction();
-			ordsdb = (OrdsDB) session.get(OrdsDB.class, dbId);
-			transaction.commit();
-		} catch (HibernateException e) {
-			log.error("Run time exception", e);
-			if (transaction != null && transaction.isActive()) {
-				try {
-					transaction.rollback();
-				} catch (HibernateException e1) {
-				}
-				throw e;
-			}
-			return null;
-		} finally {
-			session.close();
-		}
-		return ordsdb;
-	}
-
 
 	@Override
 	public boolean checkDatabaseExists(int dbId, boolean staging) throws Exception {

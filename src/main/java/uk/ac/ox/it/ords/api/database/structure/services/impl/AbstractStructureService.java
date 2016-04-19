@@ -31,8 +31,8 @@ public abstract class AbstractStructureService {
 	
 	/**
 	 * Removes quotes from identifiers
-	 * @param ident
-	 * @return
+	 * @param ident the identifier to unquote
+	 * @return the unquoted identifier
 	 */
 	protected String unquote(String ident){
 		ident = StringUtils.removeStart(ident, "\"");
@@ -48,9 +48,8 @@ public abstract class AbstractStructureService {
 	 * cannot be used. As an extra precaution we check for an authenticated
 	 * user before performing this function.
 	 * 
-	 * @param ident
-	 *            The table, column or other object name.
-	 * @return
+	 * @param ident The table, column or other object name.
+	 * @return the quoted identifier
 	 */
 	protected String quote_ident(String ident) {
 		
@@ -76,8 +75,8 @@ public abstract class AbstractStructureService {
 	 * method, it has been marked as Deprecated and will be removed in the 
 	 * near future.
 	 * 
-	 * @param literal
-	 * @return
+	 * @param literal the literal to quote
+	 * @return the quoted literal
 	 */
 	@Deprecated
   	protected String quote_literal(String literal){

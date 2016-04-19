@@ -25,49 +25,49 @@ import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.TableStru
 public interface TableStructureService {
 	
 	/**
-	 * 
-	 * @param dbID
-	 * @param instance
-	 * @param tableName
-	 * @return
-	 * @throws Exception
+	 * Get table metadata
+	 * @param database the database
+	 * @param tableName the table
+	 * @param staging if this applies to a staging database
+	 * @return the result
+	 * @throws Exception if there is a problem
 	 */
-	public TableList getTableMetadata ( OrdsPhysicalDatabase database, String tableName, boolean stagin ) throws Exception;
+	public TableList getTableMetadata ( OrdsPhysicalDatabase database, String tableName, boolean staging ) throws Exception;
 	
 	/**
-	 * 
-	 * @param dbID
-	 * @param instance
-	 * @param tableName
-	 * @throws Exception
+	 * Creates a table
+	 * @param database the database
+	 * @param tableName the table
+	 * @param staging if this applies to a staging database
+	 * @throws Exception if there is a problem
 	 */
 	public void createNewTable ( OrdsPhysicalDatabase database, String tableName, boolean staging ) throws Exception;
 	
 	/**
-	 * 
-	 * @param dbID
-	 * @param instance
-	 * @param tableName
-	 * @param tableNewName
-	 * @throws Exception
+	 * Renames a table 
+	 * @param database the database
+	 * @param tableName the table
+	 * @param tableNewName the new name
+	 * @param staging if this applies to a staging database
+	 * @throws Exception if there is a problem
 	 */
 	public void renameTable ( OrdsPhysicalDatabase database, String tableName, String tableNewName, boolean staging ) throws Exception;
 	
 	
 	/**
-	 * 
-	 * @param dbID
-	 * @param instance
-	 * @param positionRequest
+	 * Set position of table
+	 * @param database the database
+	 * @param positionRequest the position to set
+	 * @throws Exception if there is a problem
 	 */
 	public void setTablePositions ( OrdsPhysicalDatabase database, PositionRequest positionRequest ) throws Exception;
 	
 	/**
-	 * 
-	 * @param dbID
-	 * @param instance
-	 * @param tableName
-	 * @throws Exception
+	 * Delete table
+	 * @param database the database
+	 * @param tableName the table
+	 * @param staging if this applies to a staging database
+	 * @throws Exception if there is a problem
 	 */
 	public void deleteTable ( OrdsPhysicalDatabase database, String tableName, boolean staging ) throws Exception;
 

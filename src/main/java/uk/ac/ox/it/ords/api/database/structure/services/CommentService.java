@@ -26,48 +26,48 @@ public interface CommentService {
 	// table comments
 	/**
 	 * Gets the comment for a table
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @return
-	 * @throws Exception
+	 * @param database the database
+	 * @param tableName the table
+	 * @param staging  whether this is a staging version
+	 * @throws Exception if there is a problem getting the comment
+	 * @return the comment
 	 */
-	public String getTableComment ( OrdsPhysicalDatabase database, String tableName, boolean stagin ) throws Exception;
+	public String getTableComment ( OrdsPhysicalDatabase database, String tableName, boolean staging ) throws Exception;
 	
 	/**
 	 * Sets the comment for a table
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param comment
-	 * @throws Exception
+	 * @param database the database
+	 * @param tableName the table
+	 * @param comment the comment to set
+	 * @param staging  whether this is a staging version
+	 * @throws Exception if there is a problem setting the comment
 	 */
-	public void setTableComment ( OrdsPhysicalDatabase database, String tableName, String comment, boolean stagin ) throws Exception;
+	public void setTableComment ( OrdsPhysicalDatabase database, String tableName, String comment, boolean staging ) throws Exception;
 	
 	
 	// column comments
+	
 	/**
 	 * Gets the comment for named column in a table
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param columnName
-	 * @return
-	 * @throws Exception
+	 * @param database the database
+	 * @param tableName the table
+	 * @param columnName the column
+	 * @param staging  whether this is a staging version
+	 * @throws Exception if there is a problem getting the comment
+	 * @return the comment
 	 */
-	public String getColumnComment ( OrdsPhysicalDatabase database, String tableName, String columnName, boolean stagin ) throws Exception;
+	public String getColumnComment ( OrdsPhysicalDatabase database, String tableName, String columnName, boolean staging ) throws Exception;
 	
 	/**
 	 * Set the comment for a named column in a table
-	 * @param dbId
-	 * @param instance
-	 * @param tableName
-	 * @param columnName
-	 * @throws Exception
+	 * @param database the database
+	 * @param tableName the table
+	 * @param columnName the column
+	 * @param comment the comment to set
+	 * @param staging  whether this is a staging version
+	 * @throws Exception if there is a problem setting the comment
 	 */
-	public void setColumnComment ( OrdsPhysicalDatabase database, String tableName, String columnName, String comment, boolean stagin ) throws Exception;
-	
-	
+	public void setColumnComment ( OrdsPhysicalDatabase database, String tableName, String columnName, String comment, boolean staging ) throws Exception;
 	
 	/**
 	 * Factory for obtaining implementations

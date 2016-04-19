@@ -101,7 +101,11 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		// Check column exists
 		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").get();
 		assertEquals(403, response.getStatus());
-
+		
+		loginUsingSSO("pinga@nowhere.co","pinga@nowhere.co");
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").get();
+		assertEquals(403, response.getStatus());
+		logout();
 	}
 	
 	
@@ -110,6 +114,11 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
 		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").post(column1);
 		assertEquals(403, response.getStatus());
+		
+		loginUsingSSO("pinga@nowhere.co","pinga@nowhere.co");
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").post(column1);
+		assertEquals(403, response.getStatus());
+		logout();
 	}
 	
 	
