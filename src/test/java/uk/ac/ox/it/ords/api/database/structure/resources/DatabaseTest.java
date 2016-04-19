@@ -346,7 +346,6 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		dbr.setInstance("TEST");
 		response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
-		
 		OrdsPhysicalDatabase dbTest = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
 		assertNotNull(dbTest);
 		
@@ -359,10 +358,42 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		assertEquals(200, response.getStatus());
 		
 		//
+		// Rebuild Test 
+		//
+		dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		dbr.setInstance("TEST");
+		response = getClient().path("/").post(dbr);
+		assertEquals(201, response.getStatus());
+		dbTest = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(dbTest);
+		
+		//
+		// Merge Test into Main Unauthn
+		//
+		logout();
+		databaseRequest = new DatabaseRequest();
+		databaseRequest.setCloneFrom(dbTest.getPhysicalDatabaseId());
+		response = getClient().path("/"+dbMain.getPhysicalDatabaseId()).put(databaseRequest);
+		assertEquals(403, response.getStatus());
+		
+		//
+		// Merge Test into Main Unauthz
+		//
+		loginUsingSSO("pinga@penguins.com","pinga@penguins.com");
+		response = getClient().path("/"+dbMain.getPhysicalDatabaseId()).put(databaseRequest);
+		assertEquals(403, response.getStatus());
+		logout();
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		
+		//
 		// Merge Null into Main
 		//
 		databaseRequest.setCloneFrom(null);
 		response = getClient().path("/"+dbMain.getPhysicalDatabaseId()).put(databaseRequest);
+		assertEquals(400, response.getStatus());
+		
+		databaseRequest.setCloneFrom(null);
+		response = getClient().path("/"+dbMain.getPhysicalDatabaseId()).put(null);
 		assertEquals(400, response.getStatus());
 
 		//
@@ -378,6 +409,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		databaseRequest.setCloneFrom(99999);
 		response = getClient().path("/"+dbMain.getPhysicalDatabaseId()).put(databaseRequest);
 		assertEquals(404, response.getStatus());
+		
 		
 		//
 		// Delete the databases
