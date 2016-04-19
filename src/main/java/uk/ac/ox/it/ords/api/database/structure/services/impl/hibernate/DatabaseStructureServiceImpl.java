@@ -227,14 +227,6 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		
 		return stagingName;
 	}
-	
-
-	@Override
-	public void updateStagingDatabase(int dbId, OrdsPhysicalDatabase update)
-			throws Exception {
-		// TODO Auto-generated method stub
-
-	}
 
 	@Override
 	public void mergeStagingToActual(int dbId)

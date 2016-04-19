@@ -91,14 +91,6 @@ public interface DatabaseStructureService {
 	public String createNewStagingDatabase ( int dbId ) throws Exception;
 	
 	/**
-	 * Updates the metadata for the staging database
-	 * @param dbId the database to update
-	 * @param update the new details
-	 * @throws Exception if there is a problem updating the database metadata
-	 */
-	public void updateStagingDatabase ( int dbId, OrdsPhysicalDatabase update ) throws Exception;
-	
-	/**
 	 * Merges the staging version of the database with the actual, if the staging version exists
 	 * This is the save operation
 	 * @param mainId the database
