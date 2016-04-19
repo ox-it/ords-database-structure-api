@@ -52,6 +52,7 @@ public class DatabaseStructurePermissionSets {
 	}
 	public static List<String> getPermissionsForSysadmin(){
 		ArrayList<String> permissions = new ArrayList<String>();
+		permissions.add(DatabaseStructurePermissions.DATABASE_CREATE);
 		permissions.add(DatabaseStructurePermissions.DATABASE_CREATE_FULL);
 		permissions.add(DatabaseStructurePermissions.DATABASE_UPDATE_ALL);
 		permissions.add(DatabaseStructurePermissions.DATABASE_DELETE_ALL);
