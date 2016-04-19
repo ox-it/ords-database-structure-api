@@ -100,6 +100,41 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		logout();
 	}
 	
+	@Test
+	public void viewDatabaseUnauth() {
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		Response response = getClient().path("/").post(dbr);
+		assertEquals(201, response.getStatus());
+		
+		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(db);
+		String dbId = Integer.toString(db.getPhysicalDatabaseId());
+		int dbID = db.getPhysicalDatabaseId();
+		System.out.println(dbID);
+		assertEquals(200, getClient().path("/"+dbID).get().getStatus());
+		logout();
+		
+		//
+		// get not logged in
+		//
+		assertEquals(403, getClient().path("/"+dbID).get().getStatus());
+		
+		//
+		// get with no permissions
+		//
+		loginUsingSSO("pinga@nowhere.co","pinga@nowhere.co");
+		assertEquals(403, getClient().path("/"+dbID).get().getStatus());
+		logout();
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		response = getClient().path("/"+dbID).delete();
+		assertEquals(200, response.getStatus());
+		AbstractResourceTest.databaseIds.remove(dbId);
+		
+		logout();
+	}
+	
 	
 	@Test
 	public void stagingTest() {
@@ -293,4 +328,62 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		logout();
 	}
 	
+	@Test
+	public void mergeTestToMain(){
+		
+		// Create first database
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		dbr.setInstance("MAIN");
+		Response response = getClient().path("/").post(dbr);
+		assertEquals(201, response.getStatus());
+		
+		OrdsPhysicalDatabase dbMain = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(dbMain);
+		
+		dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		dbr.setInstance("TEST");
+		response = getClient().path("/").post(dbr);
+		assertEquals(201, response.getStatus());
+		
+		OrdsPhysicalDatabase dbTest = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(dbTest);
+		
+		//
+		// Merge Test into Main
+		//
+		DatabaseRequest databaseRequest = new DatabaseRequest();
+		databaseRequest.setCloneFrom(dbTest.getPhysicalDatabaseId());
+		response = getClient().path("/"+dbMain.getPhysicalDatabaseId()).put(databaseRequest);
+		assertEquals(200, response.getStatus());
+		
+		//
+		// Merge Null into Main
+		//
+		databaseRequest.setCloneFrom(null);
+		response = getClient().path("/"+dbMain.getPhysicalDatabaseId()).put(databaseRequest);
+		assertEquals(400, response.getStatus());
+
+		//
+		// Merge Test into null
+		//
+		databaseRequest.setCloneFrom(dbTest.getPhysicalDatabaseId());
+		response = getClient().path("/9999").put(databaseRequest);
+		assertEquals(404, response.getStatus());
+		
+		//
+		// Merge Nonexisting into Main
+		//
+		databaseRequest.setCloneFrom(99999);
+		response = getClient().path("/"+dbMain.getPhysicalDatabaseId()).put(databaseRequest);
+		assertEquals(404, response.getStatus());
+		
+		//
+		// Delete the databases
+		//
+		getClient().path("/"+dbMain.getPhysicalDatabaseId()).delete();
+		getClient().path("/"+dbTest.getPhysicalDatabaseId()).delete();
+		
+	}
 }
