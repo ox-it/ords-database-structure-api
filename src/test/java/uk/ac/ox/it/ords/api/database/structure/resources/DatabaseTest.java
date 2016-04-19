@@ -37,6 +37,7 @@ import uk.ac.ox.it.ords.api.database.structure.dto.PositionRequest;
 import uk.ac.ox.it.ords.api.database.structure.dto.TablePosition;
 import uk.ac.ox.it.ords.api.database.structure.dto.TableRenameRequest;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
+import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
 import uk.ac.ox.it.ords.security.model.Permission;
@@ -417,5 +418,83 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		getClient().path("/"+dbMain.getPhysicalDatabaseId()).delete();
 		getClient().path("/"+dbTest.getPhysicalDatabaseId()).delete();
 		
+	}
+	
+	@Test
+	public void cloneDatabase() throws Exception{
+
+		// Create a database
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		Response response = getClient().path("/").post(dbr);
+		assertEquals(201, response.getStatus());
+
+		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(db);
+		
+		int physicalDatabaseId = db.getPhysicalDatabaseId();
+		
+		// Now make a TEST version
+		dbr.setInstance("TEST");
+		response = getClient().path("/"+physicalDatabaseId+"/").post(dbr);
+		assertEquals(201, response.getStatus());
+		db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		
+		// Check the TEST version exists
+		response = getClient().path("/"+db.getPhysicalDatabaseId()+"/").get();
+		assertEquals(200, response.getStatus());
+		boolean exists = DatabaseStructureService.Factory.getInstance().checkDatabaseExists(db.getPhysicalDatabaseId(), false);
+		assertTrue(exists);
+		
+		// Drop test
+		response = getClient().path("/"+db.getPhysicalDatabaseId()+"/").delete();
+		assertEquals(200, response.getStatus());
+		
+		// Drop main
+		response = getClient().path("/"+physicalDatabaseId+"/").delete();
+		assertEquals(200, response.getStatus());
+	}
+	
+	@Test
+	public void cloneDatabaseNonexisting() throws Exception{
+
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		dbr.setInstance("TEST");
+		Response response = getClient().path("/9999/").post(dbr);
+		assertEquals(404, response.getStatus());
+	}
+	
+	@Test
+	public void cloneDatabaseUnauth() throws Exception{
+		
+		// Create a database
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		Response response = getClient().path("/").post(dbr);
+		assertEquals(201, response.getStatus());
+
+		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(db);
+		
+		int physicalDatabaseId = db.getPhysicalDatabaseId();
+		
+		// Now make a TEST version
+		logout();
+
+		dbr.setInstance("TEST");
+		response = getClient().path("/"+physicalDatabaseId+"/").post(dbr);
+		assertEquals(403, response.getStatus());
+		
+		loginUsingSSO("pinga@penguins.com","pinga@penguins.com");
+
+		dbr.setInstance("TEST");
+		response = getClient().path("/"+physicalDatabaseId+"/").post(dbr);
+		assertEquals(403, response.getStatus());
+		
+		// Drop main
+		logout();
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		response = getClient().path("/"+physicalDatabaseId+"/").delete();
+		assertEquals(200, response.getStatus());
 	}
 }
