@@ -112,7 +112,6 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		assertNotNull(db);
 		String dbId = Integer.toString(db.getPhysicalDatabaseId());
 		int dbID = db.getPhysicalDatabaseId();
-		System.out.println(dbID);
 		assertEquals(200, getClient().path("/"+dbID).get().getStatus());
 		logout();
 		
