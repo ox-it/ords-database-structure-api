@@ -16,7 +16,6 @@
 package uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate;
 
 import java.io.File;
-import java.util.List;
 
 import org.hibernate.HibernateException;
 import org.hibernate.SessionFactory;
@@ -29,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
 import uk.ac.ox.it.ords.api.database.structure.model.SchemaDesignerTable;
 import uk.ac.ox.it.ords.api.database.structure.model.User;
-import uk.ac.ox.it.ords.api.database.structure.services.ServerConfigurationService;
 import uk.ac.ox.it.ords.security.SimplePersistentSession;
 import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
 import uk.ac.ox.it.ords.security.model.Permission;
@@ -76,16 +74,6 @@ public class HibernateUtils {
 		}
 	}
 	
-	public static String getFirstDBServer ( ) throws Exception {
-		ServerConfigurationService serverConf = ServerConfigurationService.Factory.getInstance();
-		List<String> serverList = serverConf.getServers();
-		if ( serverList.size() == 0 ) {
-			throw new Exception("Configuration problem, no servers found in configuration files");
-		}
-		return serverList.get(0);
-
-	}
-
 	public static SessionFactory getSessionFactory() {
 		if (sessionFactory == null)
 			init();

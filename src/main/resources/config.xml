@@ -8,6 +8,9 @@
    
     <!-- Server-level properties. Properties set here will override package properties -->
 	<properties fileName="/etc/ordsconfig/ords.properties"/>
+	
+	<!-- This is the default properties file -->
+  	<properties fileName="database.properties"/>
 
 
 </configuration>

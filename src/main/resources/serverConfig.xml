@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<ordsServerConfig hostName="localhost" testServer="true" testEnvironment="true">
-    <serverList>
-        <server ip="localhost" name="localhost" full="false"/>
-    </serverList>
-</ordsServerConfig>
