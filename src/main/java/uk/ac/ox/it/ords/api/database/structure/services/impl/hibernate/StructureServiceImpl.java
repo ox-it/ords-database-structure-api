@@ -30,11 +30,8 @@ import java.util.Properties;
 import javax.sql.rowset.CachedRowSet;
 import javax.sql.rowset.RowSetProvider;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.lang.StringUtils;
-import org.apache.shiro.SecurityUtils;
-import org.hibernate.SQLQuery;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
@@ -78,52 +75,11 @@ public class StructureServiceImpl extends AbstractStructureService {
 	public SessionFactory getOrdsDBSessionFactory() {
 		return sessionFactory;
 	}
-
-	/**
-	 * Gets the session factory for a user's database
-	 * 
-	 * @param dbName the database
-	 * @param userName the user 
-	 * @param password the password
-	 * @return SessionFactory object
-	 */
-	public SessionFactory getUserDBSessionFactory(String dbName,
-			String userName, String password) {
-		return HibernateUtils.getUserDBSessionFactory(dbName, userName,
-				password);
-
-	}
-
-	/**
-	 * Returns the odbc username for the currently signed in user
-	 * 
-	 * @return the ODBC user name
-	 * @throws Exception if there is a problem
-	 */
-	public String getODBCUserName() throws Exception {
-		String principalName = SecurityUtils.getSubject().getPrincipal()
-				.toString();
-		User u = this.getUserByPrincipal(principalName);
-		return u.calculateOdbcUserForOrds();
-	}
-
-	/**
-	 * Returns the odbc password for the currently signed in user
-	 * 
-	 * @return the ODBC password
-	 * @throws ConfigurationException if there is a problem
-	 */
-	public String getODBCPassword() throws ConfigurationException {
-		return MetaConfiguration.getConfiguration().getString(
-				StructureServiceImpl.ODBC_MASTER_PASSWORD_PROPERTY);
-	}
-	
 	
 	public String getORDSDatabaseUser() throws ConfigurationException {
 		return MetaConfiguration.getConfiguration().getString(
 				StructureServiceImpl.ORDS_DATABASE_USER);
 	}
-	
 	
 	public String getORDSDatabasePassword()  throws ConfigurationException {
 		return MetaConfiguration.getConfiguration().getString(
@@ -144,7 +100,7 @@ public class StructureServiceImpl extends AbstractStructureService {
 	public boolean checkDatabaseExists(String databaseName) throws Exception {
 		String sql = "SELECT COUNT(*) as count from pg_database WHERE datname = ?";
 		List<Object> parameters = this.createParameterList(databaseName);
-		return this.runCountSql(sql, parameters,null, null, null, null) == 1;
+		return this.runCountSql(sql, parameters,null, null) == 1;
 		/*
 		 * Session session = this.getOrdsDBSessionFactory().getCurrentSession();
 		 * try { Transaction transaction = session.beginTransaction(); SQLQuery
@@ -167,11 +123,10 @@ public class StructureServiceImpl extends AbstractStructureService {
 	 * @return true if the table exists
 	 * @throws Exception if there is a problem performing the check
 	 */
-	public boolean checkTableExists(String tableName, String databaseName, String databaseServer,
-			String userName, String password) throws Exception {
+	public boolean checkTableExists(String tableName, String databaseName, String databaseServer) throws Exception {
 		String sql = "SELECT COUNT(*) as count FROM pg_class WHERE relname=?";
 		List<Object> parameters = this.createParameterList(tableName);
-		return runCountSql(sql, parameters, databaseName, databaseServer, userName, password) == 1;
+		return runCountSql(sql, parameters, databaseName, databaseServer) == 1;
 	}
 
 	/**
@@ -187,39 +142,37 @@ public class StructureServiceImpl extends AbstractStructureService {
 	 * @throws Exception if there is a problem performing the check
 	 */
 	public boolean checkColumnExists(String columnName, String tableName,
-			String databaseName, String databaseServer, String userName, String password)
+			String databaseName, String databaseServer)
 			throws Exception {
 		String sql = "SELECT COUNT(*) as count FROM information_schema.columns "
 				+ "WHERE table_catalog=? AND table_schema=? AND table_name=? AND column_name=?";
 		List<Object> parameters = this.createParameterList(databaseName,
 				"public", tableName, columnName);
-		return runCountSql(sql, parameters, databaseName, databaseServer, userName, password) == 1;
+		return runCountSql(sql, parameters, databaseName, databaseServer) == 1;
 	}
 
 	public boolean checkConstraintExists(String tableName,
-			String constraintName, String databaseName, String databaseServer, String userName,
-			String password) throws Exception {
+			String constraintName, String databaseName, String databaseServer) throws Exception {
 		String query = "SELECT COUNT(*) as count FROM information_schema.table_constraints "
 				+ "WHERE table_catalog=? AND table_schema=? AND table_name=? AND constraint_name=?;";
 		List<Object> parameters = this.createParameterList(databaseName,
 				"public", tableName, constraintName);
-		return runCountSql(query, parameters, databaseName, databaseServer, userName, password) == 1;
+		return runCountSql(query, parameters, databaseName, databaseServer) == 1;
 
 	}
 
 	public boolean checkIndexExists(String tableName, String indexName,
-			String databaseName, String databaseServer, String userName, String password)
+			String databaseName, String databaseServer)
 			throws Exception {
 		String query = "SELECT COUNT(*) FROM pg_index as idx JOIN pg_class as i ON i.oid = idx.indexrelid "
 				+ "WHERE CAST(idx.indrelid::regclass as text) = ? AND relname = ?";
 		List<Object> parameters = this
 				.createParameterList(tableName, indexName);
-		return runCountSql(query, parameters, databaseName, databaseServer, userName, password) == 1;
+		return runCountSql(query, parameters, databaseName, databaseServer) == 1;
 
 	}
 
-	private int runCountSql(String sql, List<Object> parameters, String dbName, String databaseServer,
-			String username, String password) throws Exception {
+	private int runCountSql(String sql, List<Object> parameters, String dbName, String databaseServer) throws Exception {
 		CachedRowSet result = this
 				.runJDBCQuery(sql, parameters, databaseServer, dbName);
 		try {
@@ -234,74 +187,14 @@ public class StructureServiceImpl extends AbstractStructureService {
 
 	}
 	
-	
 	protected void runSQLStatementOnOrdsDB(String statement) {
-		Session session = this.getOrdsDBSessionFactory().openSession();
 		try {
-			Transaction transaction = session.beginTransaction();
-			SQLQuery query = session.createSQLQuery(statement);
-			query.executeUpdate();
-			transaction.commit();
+			this.runJDBCQuery(statement, null, null, null);
 		}
 		catch (Exception e) {
 			log.debug(e.getMessage());
-			session.getTransaction().rollback();
-			throw e;
-		}
-		finally {
-			session.close();
 		}
 	}
-
-//	protected void runSQLStatement(String statement, String databaseName,
-//			String userName, String password) {
-//		Session session;
-//		if (databaseName == null) {
-//			session = this.getOrdsDBSessionFactory().openSession();
-//		} else {
-//			session = this.getUserDBSessionFactory(databaseName, userName,
-//					password).openSession();
-//		}
-//		try {
-//			Transaction transaction = session.beginTransaction();
-//			SQLQuery query = session.createSQLQuery(statement);
-//			query.executeUpdate();
-//			transaction.commit();
-//		} catch (Exception e) {
-//			log.debug(e.getMessage());
-//			session.getTransaction().rollback();
-//			throw e;
-//		} finally {
-//			session.close();
-//		}
-//	}
-
-	protected Object singleResultQuery(String query, String databaseName,
-			String userName, String password) throws Exception {
-
-		Session session;
-		if (databaseName == null) {
-			session = this.getOrdsDBSessionFactory().openSession();
-		} else {
-			session = this.getUserDBSessionFactory(databaseName, userName,
-					password).openSession();
-		}
-		try {
-			Transaction transaction = session.beginTransaction();
-			SQLQuery sqlQuery = session.createSQLQuery(query);
-			Object result = sqlQuery.uniqueResult();
-			transaction.commit();
-			return result;
-		} catch (Exception e) {
-			log.debug(e.getMessage());
-			session.getTransaction().rollback();
-			throw e;
-		} finally {
-			session.close();
-		}
-	}
-
-
 
 	protected void saveModelObject(Object objectToSave) throws Exception {
 		Session session = this.getOrdsDBSessionFactory().openSession();
@@ -340,34 +233,6 @@ public class StructureServiceImpl extends AbstractStructureService {
 			Transaction transaction = session.beginTransaction();
 			session.delete(objectToRemove);
 			transaction.commit();
-		} catch (Exception e) {
-			log.debug(e.getMessage());
-			session.getTransaction().rollback();
-			throw e;
-		} finally {
-			session.close();
-		}
-	}
-	
-
-
-	@SuppressWarnings("rawtypes")
-	protected List runSQLQuery(String query, String databaseName,
-			String username, String password) {
-		Session session;
-		if (databaseName == null) {
-			session = this.getOrdsDBSessionFactory().openSession();
-		} else {
-			session = this.getUserDBSessionFactory(databaseName, username,
-					password).openSession();
-		}
-		try {
-			Transaction transaction = session.beginTransaction();
-			SQLQuery sqlQuery = session.createSQLQuery(query);
-			List results = sqlQuery.list();
-			transaction.commit();
-			return results;
-
 		} catch (Exception e) {
 			log.debug(e.getMessage());
 			session.getTransaction().rollback();
@@ -453,11 +318,10 @@ public class StructureServiceImpl extends AbstractStructureService {
 				databaseName, databaseServer, tableName);
 
 		log.debug(tableName);
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
+
 		// Get a complete description of the table columns
 		List<HashMap<String, String>> columns = this.getTableDescription(
-				databaseName, tableName, databaseServer, userName, password);
+				databaseName, tableName, databaseServer);
 
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("We have %d rows", columns.size()));
@@ -512,8 +376,7 @@ public class StructureServiceImpl extends AbstractStructureService {
 			HashMap<String, HashMap<String, String>> foreignTableColumnMap = new HashMap<String, HashMap<String, String>>();
 			List<HashMap<String, String>> foreignTableColumns = this
 					.getTableDescription(databaseName,
-							(String) foreignKey.get("foreignTableName"), databaseServer,
-							userName, password);
+							(String) foreignKey.get("foreignTableName"), databaseServer);
 			if (foreignTableColumns != null) {
 				for (HashMap entry : foreignTableColumns) {
 					HashMap<String, String> column = new HashMap<String, String>();
@@ -634,8 +497,7 @@ public class StructureServiceImpl extends AbstractStructureService {
 	}
 
 	public List<HashMap<String, String>> getTableDescription(
-			String databaseName, String tableName, String server, String userName,
-			String password) throws Exception {
+			String databaseName, String tableName, String server) throws Exception {
 		log.debug("getTableDescription");
 
 		ArrayList<String> fields = new ArrayList<String>();
@@ -730,8 +592,9 @@ public class StructureServiceImpl extends AbstractStructureService {
 
 	private String[] getPostgresVersionArray() throws Exception {
 
-		String version = (String) this.singleResultQuery("SELECT version()",
-				null, null, null);
+		CachedRowSet results = this.runJDBCQuery("SELECT version()", null, this.getORDSDatabaseHost(), this.getORDSDatabaseName());
+		results.next();
+		String version = results.getString(1);
 
 		String[] versionArray = null;
 		String[] tempVersionArray = null;
@@ -778,71 +641,23 @@ public class StructureServiceImpl extends AbstractStructureService {
 	
 	protected void runSQLStatements(List<String> statements, String server,
 			String databaseName) throws Exception {
-		Connection connection = null;
-		Properties connectionProperties = new Properties();
-		PreparedStatement preparedStatement = null;
-		if ( server != null ){
-			
-			String userName = this.getODBCUserName();
-			String password = this.getODBCPassword();
-			connectionProperties.put("user", userName);
-			connectionProperties.put("password", password);
-		}
-		else {
-			// get the ords database configuration
-			Configuration config = MetaConfiguration.getConfiguration();
-			connectionProperties.put("user", config.getString(StructureServiceImpl.ORDS_DATABASE_USER));
-			connectionProperties.put("password", config.getString(StructureServiceImpl.ORDS_DATABASE_PASSWORD));
-			server = config.getString(StructureServiceImpl.ORDS_DATABASE_HOST);
-			databaseName = this.getORDSDatabaseName();
-			if ( server == null ) {
-				server = "localhost";
-			}
-		}
-		String connectionURL = "jdbc:postgresql://" + server + "/"
-				+ databaseName;
-		try {
-			connection = DriverManager.getConnection(connectionURL,
-					connectionProperties);
+		
 			for (String statement: statements ) {
-				preparedStatement = connection.prepareStatement(statement);
-				preparedStatement.execute();
+				this.runJDBCQuery(statement, null, server, databaseName);
 			}
-		}
-		finally {
-			if (preparedStatement != null) {
-				preparedStatement.close();
-			}
-			if (connection != null) {
-				connection.close();
-			}
-		}
+		
 	}
 
 	protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,
-			String server, String databaseName) throws Exception {
+			String server, String databaseName, String userName, String password) throws Exception
+	{
 		Connection connection = null;
 		Properties connectionProperties = new Properties();
 		PreparedStatement preparedStatement = null;
-		if ( server != null && databaseName != null ){
-			
-			String userName = this.getODBCUserName();
-			String password = this.getODBCPassword();
-			connectionProperties.put("user", userName);
-			connectionProperties.put("password", password);
-		}
-		else {
-			// get the ords database configuration
-			//Configuration config = MetaConfiguration.getConfiguration();
-			connectionProperties.put("user", this.getORDSDatabaseUser());
-			connectionProperties.put("password", this.getORDSDatabasePassword());
-			if ( server == null ) {
-				server = this.getORDSDatabaseHost();
-			}
-			if (databaseName == null ) {
-				databaseName = this.getORDSDatabaseName();
-			}
-		}
+
+		connectionProperties.put("user", userName);
+		connectionProperties.put("password", password);
+
 		String connectionURL = "jdbc:postgresql://" + server + "/"
 				+ databaseName;
 		try {
@@ -891,6 +706,23 @@ public class StructureServiceImpl extends AbstractStructureService {
 				connection.close();
 			}
 		}
+
+	};
+	
+	protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,
+			String server, String databaseName) throws Exception {
+
+		String userName = this.getORDSDatabaseUser();
+		String password = this.getORDSDatabasePassword();
+
+		if ( server == null ) {
+			server = this.getORDSDatabaseHost();
+		}
+		if (databaseName == null ) {
+			databaseName = this.getORDSDatabaseName();
+		}
+
+		return runJDBCQuery(query, parameters, server, databaseName, userName, password);
 
 	}
 

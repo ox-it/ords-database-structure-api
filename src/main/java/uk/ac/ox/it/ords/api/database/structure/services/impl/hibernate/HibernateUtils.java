@@ -40,14 +40,8 @@ public class HibernateUtils {
 
 	private static SessionFactory sessionFactory;
 	private static ServiceRegistry serviceRegistry;
-
-	private static SessionFactory userDBSessionFactory;
-	private static ServiceRegistry userDBServiceRegistry;
-
-	private static String currentUser;
 	
 	protected static String HIBERNATE_CONFIGURATION_PROPERTY = "ords.hibernate.configuration";
-	protected static String HIBERNATE_USER_CONFIGURATION_PROPERTY="ords.hibernate.user.configuration";
 
 	protected static void addMappings(Configuration configuration){
 		configuration.addAnnotatedClass(OrdsPhysicalDatabase.class);
@@ -81,38 +75,6 @@ public class HibernateUtils {
 			throw new ExceptionInInitializerError(he);
 		}
 	}
-
-	private static void initUserDBSessionFactory(String odbcUser,
-			String odbcPassword, String databaseName) {
-		try {
-			Configuration userDBConfiguration = new Configuration();
-			String hibernateConfigLocation = MetaConfiguration.getConfiguration().getString(HIBERNATE_USER_CONFIGURATION_PROPERTY);
-
-			if (hibernateConfigLocation == null) {
-				userDBConfiguration.configure();
-			} else {
-				userDBConfiguration.configure(hibernateConfigLocation);
-			}
-			userDBConfiguration.setProperty("hibernate.connection.url",
-					"jdbc:postgresql://localhost/" + databaseName);
-			userDBConfiguration.setProperty("hibernate.connection.username",
-					odbcUser);
-			userDBConfiguration.setProperty("hibernate.connection.password",
-					odbcPassword);
-			
-			// oops don't do this or it adds all the ords tables to the user's database!
-			//addMappings(userDBConfiguration);
-
-			userDBServiceRegistry = new ServiceRegistryBuilder().applySettings(
-					userDBConfiguration.getProperties()).buildServiceRegistry();
-
-			userDBSessionFactory = userDBConfiguration
-					.buildSessionFactory(userDBServiceRegistry);
-		} catch (HibernateException he) {
-			System.err.println("Error creating Session: " + he);
-			throw new ExceptionInInitializerError(he);
-		}
-	}
 	
 	public static String getFirstDBServer ( ) throws Exception {
 		ServerConfigurationService serverConf = ServerConfigurationService.Factory.getInstance();
@@ -123,24 +85,6 @@ public class HibernateUtils {
 		return serverList.get(0);
 
 	}
-	
-	
-	
-
-	public static SessionFactory getUserDBSessionFactory(String databaseName,
-			String username, String password) {
-		if (!username.equals(currentUser)) {
-			if (userDBSessionFactory != null) {
-				userDBSessionFactory.close();
-			}
-			initUserDBSessionFactory(username, password, databaseName);
-			currentUser = username;
-		}
-		return userDBSessionFactory;
-	}
-	
-	
-	
 
 	public static SessionFactory getSessionFactory() {
 		if (sessionFactory == null)

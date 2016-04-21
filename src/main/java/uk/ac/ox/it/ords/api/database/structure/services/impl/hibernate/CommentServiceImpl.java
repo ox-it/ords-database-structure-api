@@ -28,14 +28,12 @@ public class CommentServiceImpl extends StructureServiceImpl
 	@Override
 	public String getTableComment(OrdsPhysicalDatabase database, String tableName,
 			boolean staging) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		if (!this.checkTableExists(tableName, databaseName, server,userName, password)) {
+		if (!this.checkTableExists(tableName, databaseName, server)) {
 			throw new NotFoundException();
 		}
 		return this.tableComment(databaseName, server, tableName);
@@ -44,14 +42,12 @@ public class CommentServiceImpl extends StructureServiceImpl
 	@Override
 	public void setTableComment(OrdsPhysicalDatabase database, String tableName,
 			String comment, boolean staging) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		if (!this.checkTableExists(tableName, databaseName, server, userName, password)) {
+		if (!this.checkTableExists(tableName, databaseName, server)) {
 			throw new NotFoundException();
 		}
 		String statement = "COMMENT ON TABLE %s IS %s";
@@ -62,14 +58,12 @@ public class CommentServiceImpl extends StructureServiceImpl
 	@Override
 	public String getColumnComment(OrdsPhysicalDatabase database, String tableName,
 			String columnName, boolean staging) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		if ( !this.checkColumnExists(columnName, tableName, databaseName, server, userName, password)){
+		if ( !this.checkColumnExists(columnName, tableName, databaseName, server)){
 			throw new NotFoundException();
 		}
 		return this.columnComment(databaseName, server, tableName, columnName);
@@ -78,14 +72,12 @@ public class CommentServiceImpl extends StructureServiceImpl
 	@Override
 	public void setColumnComment(OrdsPhysicalDatabase database, String tableName,
 			String columnName, String comment, boolean staging) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		if ( !this.checkColumnExists(columnName, tableName, databaseName, server, userName, password)){
+		if ( !this.checkColumnExists(columnName, tableName, databaseName, server)){
 			throw new NotFoundException();
 		}
 		String statement = "COMMENT ON COLUMN %s IS %s";

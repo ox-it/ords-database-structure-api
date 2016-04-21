@@ -168,11 +168,13 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 						"Only integer fields can have auto-increment enabled");
 			}
 		}
-		String userName = this.getODBCUserName();
+
 		String databaseName = database.getDbConsumedName();
+		
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
+		
 		String server = database.getDatabaseServer();
 	
 		ArrayList<String> statements = new ArrayList<String>();
@@ -180,8 +182,8 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 			statements.add(String.format("CREATE SEQUENCE %s", sequenceName));
 			statements.add(String.format("ALTER SEQUENCE %s OWNER TO %s", 
                                                 sequenceName,
-                                                userName));
-
+                                                quote_ident(this.getORDSDatabaseUser())
+                                                ));
 		}
 		String constraints = nullConstraint+defaultConstraint;
         statements.add( String.format("ALTER TABLE %s ADD COLUMN %s %s %s;", 
@@ -206,11 +208,8 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 
-		if (!this.checkColumnExists(columnName, tableName, databaseName, server,
-				userName, password)) {
+		if (!this.checkColumnExists(columnName, tableName, databaseName, server)) {
 			throw new NotFoundException(String.format(
 					"Column name %s does not exist", columnName));
 		}
@@ -296,8 +295,7 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 		// with that name doesn't already exist in the table
 		if (newName != null
 				&& !newName.isEmpty()
-				&& checkColumnExists(newName, tableName, databaseName,server,
-						userName, password)) {
+				&& checkColumnExists(newName, tableName, databaseName,server)) {
 
 			log.error(
 					"Attempted to rename column %s to existing name %s in table %s",
@@ -440,11 +438,8 @@ public class ColumnStructureServiceImpl extends StructureServiceImpl
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 
-		if (!this.checkColumnExists(columnName, tableName, databaseName, server,
-				userName, password)) {
+		if (!this.checkColumnExists(columnName, tableName, databaseName, server)) {
 			throw new NotFoundException(String.format(
 					"Attempt to delete column %s which doesn't exist!",
 					columnName));
