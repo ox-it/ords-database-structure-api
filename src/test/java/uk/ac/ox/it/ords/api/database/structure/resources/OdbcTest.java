@@ -428,6 +428,7 @@ public class OdbcTest extends AbstractDatabaseTest {
 		//
 		odbcResponse = getClient().path("/"+dbID2+"/odbc/").post(null);
 		assertEquals(403, odbcResponse.getStatus());
+		logout();
 		
 		//
 		// Now drop the DBs
