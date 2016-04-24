@@ -23,8 +23,10 @@ import java.util.List;
 import javax.sql.rowset.CachedRowSet;
 
 import org.apache.log4j.Logger;
+import org.apache.shiro.SecurityUtils;
 
 import uk.ac.ox.it.ords.api.database.structure.model.OrdsPhysicalDatabase;
+import uk.ac.ox.it.ords.api.database.structure.model.User;
 import uk.ac.ox.it.ords.api.database.structure.services.StructureODBCService;
 import uk.ac.ox.it.ords.security.services.impl.hibernate.ODBCServiceImpl;
 
@@ -58,7 +60,20 @@ public class StructureODBCServiceImpl extends ODBCServiceImpl implements Structu
 		// This is so that we have one role per user per database, which isn't shared
 		// with other databases; we therefore don't need to worry about storing and updating 
 		// passwords.
-		return new StructureServiceImpl().getODBCUserName() + "_" + databaseName;
+		return this.getODBCUserName() + "_" + databaseName;
+	}
+	
+	/**
+	 * Returns the odbc username for the currently signed in user
+	 * 
+	 * @return the ODBC user name
+	 * @throws Exception if there is a problem
+	 */
+	public String getODBCUserName() throws Exception {
+		String principalName = SecurityUtils.getSubject().getPrincipal()
+				.toString();
+		User u = new StructureServiceImpl().getUserByPrincipal(principalName);
+		return u.calculateOdbcUserForOrds();
 	}
 	
 	@Override

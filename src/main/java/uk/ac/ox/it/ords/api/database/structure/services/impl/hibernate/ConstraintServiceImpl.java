@@ -39,17 +39,15 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 	public MessageEntity getConstraint(OrdsPhysicalDatabase database,
 			String tableName, String constraintName, boolean staging)
 			throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		if (!this.checkTableExists(tableName, databaseName, server, userName, password)) {
+		if (!this.checkTableExists(tableName, databaseName, server)) {
 			throw new NotFoundException();
 		}
-		if (!this.checkConstraintExists(tableName, constraintName, databaseName, server, userName, password)){
+		if (!this.checkConstraintExists(tableName, constraintName, databaseName, server)){
 			throw new NotFoundException();
 		}
 		return new MessageEntity(constraintName);
@@ -62,8 +60,6 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 			boolean staging) throws Exception {
 		String query = "";
 
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
@@ -105,7 +101,7 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 			}
 		}
 		// Check that the specified table exists
-		if (!this.checkTableExists(tableName, databaseName, server, userName, password)) {
+		if (!this.checkTableExists(tableName, databaseName, server)) {
 			log.error(
 					"Tried to create constraint %s for non-existant table %s",
 					constraintName, tableName);
@@ -195,7 +191,7 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 
 		// Check that a constraint with this name doesn't already exist.
 		if (this.checkConstraintExists(tableName, uniqueConstraintName,
-				databaseName, server, userName, password)) {
+				databaseName, server)) {
 			log.error(
 					"Tried to create duplicate constraint name %s on table %s",
 					uniqueConstraintName, tableName);
@@ -238,11 +234,8 @@ public class ConstraintServiceImpl extends StructureServiceImpl
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
-		
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		
-		if (!this.checkConstraintExists(tableName, constraintName, databaseName, database.getDatabaseServer(), userName, password)){
+
+		if (!this.checkConstraintExists(tableName, constraintName, databaseName, database.getDatabaseServer())){
 			throw new NotFoundException();
 		}
 		

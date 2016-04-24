@@ -35,14 +35,12 @@ public class IndexServiceImpl extends StructureServiceImpl
 	@Override
 	public MessageEntity getIndex(OrdsPhysicalDatabase database, String tableName,
 			String indexName, boolean staging) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		if ( !this.checkIndexExists(tableName, indexName, databaseName, server, userName, password)){
+		if ( !this.checkIndexExists(tableName, indexName, databaseName, server)){
 			throw new NotFoundException("");
 		}
 		return new MessageEntity(indexName);
@@ -90,8 +88,6 @@ public class IndexServiceImpl extends StructureServiceImpl
 	public void updateIndex(OrdsPhysicalDatabase database, String tableName,
 			String indexName, IndexRequest index, boolean staging)
 			throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
         String newName = index.getNewname();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
@@ -99,7 +95,7 @@ public class IndexServiceImpl extends StructureServiceImpl
 		}
 		String server = database.getDatabaseServer();
 		
-		if ( !this.checkIndexExists(tableName, indexName, databaseName, server, userName, password)){
+		if ( !this.checkIndexExists(tableName, indexName, databaseName, server)){
 			throw new NotFoundException("");
 		}
         if (indexName.equals(newName) || newName == null || newName.isEmpty()){

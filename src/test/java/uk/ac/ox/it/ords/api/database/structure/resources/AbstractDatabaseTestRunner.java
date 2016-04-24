@@ -16,12 +16,8 @@
 
 package uk.ac.ox.it.ords.api.database.structure.resources;
 
-import org.hibernate.Session;
-import org.hibernate.Transaction;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-
-import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
 
 public class AbstractDatabaseTestRunner extends AbstractDatabaseTest {
 	

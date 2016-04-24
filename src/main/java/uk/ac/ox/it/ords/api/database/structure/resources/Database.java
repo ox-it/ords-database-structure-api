@@ -65,6 +65,13 @@ import uk.ac.ox.it.ords.api.database.structure.services.TableList;
 @Path("/")
 public class Database extends AbstractResource{
 	
+	/**
+	 * Once the resource is constructed, we call the init() method to set up any persistent objects
+	 * required by the service. This is used to build the generic permissions that apply
+	 * to all database objects and allocate them to standard user roles.
+	 * 
+	 * @throws Exception
+	 */
 	@PostConstruct
 	public void init() throws Exception {
 		databaseServiceInstance().init();
@@ -1245,7 +1252,6 @@ public class Database extends AbstractResource{
 			return Response.ok(e).build();
 		}
 		catch ( Exception e ) {
-			e.printStackTrace();
 			return this.handleException(e);
 		}
 	}

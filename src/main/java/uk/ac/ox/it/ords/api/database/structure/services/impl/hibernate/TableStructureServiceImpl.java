@@ -41,14 +41,12 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	@Override
 	public TableList getTableMetadata(OrdsPhysicalDatabase database,
 			String tableName, boolean staging) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		if ( !this.checkTableExists(tableName, databaseName,server, userName, password)) {
+		if ( !this.checkTableExists(tableName, databaseName,server)) {
 			throw new NotFoundException(String.format("No table called %s found in database %s", tableName, databaseName));
 		}
 		TableList table = new TableList();
@@ -61,14 +59,12 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	@Override
 	public void createNewTable(OrdsPhysicalDatabase database, String tableName, boolean staging)
 			throws Exception {
- 		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		if ( this.checkTableExists(tableName, databaseName, server, userName, password)) {
+		if ( this.checkTableExists(tableName, databaseName, server)) {
 			throw new NamingConflictException(String.format("The table %s already exists in database %s", tableName, databaseName));
 		}
 		// aargh prepared statements don't work with create table so we have to format the string ourselves!
@@ -80,17 +76,15 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	@Override
 	public void renameTable(OrdsPhysicalDatabase database, String tableName,
 			String tableNewName, boolean staging) throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		if ( !this.checkTableExists(tableName, databaseName, server, userName, password)) {
+		if ( !this.checkTableExists(tableName, databaseName, server)) {
 			throw new NotFoundException(String.format("No table called %s found in database %s", tableName, databaseName));
 		}
-		if ( this.checkTableExists(tableNewName, databaseName,server, userName, password)){
+		if ( this.checkTableExists(tableNewName, databaseName,server)){
 			throw new NamingConflictException("There is already a table called "+tableNewName+" in database "+databaseName);
 		}
 		String query = String.format("ALTER TABLE %s RENAME TO %s;", quote_ident(tableName), quote_ident(tableNewName));
@@ -113,14 +107,12 @@ public class TableStructureServiceImpl extends StructureServiceImpl implements T
 	@Override
 	public void deleteTable(OrdsPhysicalDatabase database, String tableName, boolean staging)
 			throws Exception {
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
 		String databaseName = database.getDbConsumedName();
 		if ( staging ) {
 			databaseName = this.calculateStagingName(databaseName);
 		}
 		String server = database.getDatabaseServer();
-		if ( !this.checkTableExists(tableName, databaseName, server, userName, password)) {
+		if ( !this.checkTableExists(tableName, databaseName, server)) {
 			throw new NotFoundException(String.format("No table called %s found in database %s", tableName, databaseName));
 		}
 		this.runJDBCQuery(String.format("DROP TABLE %s", tableName), null, server, databaseName);

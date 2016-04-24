@@ -204,7 +204,6 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	@Override
 	public String createNewStagingDatabase(int dbId)
 			throws Exception {
-		String userName = this.getODBCUserName();
 		OrdsPhysicalDatabase database = this.getDatabaseMetaData(dbId);
 		String stagingName = this.calculateStagingName(database
 				.getDbConsumedName());
@@ -215,15 +214,8 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s OWNER = %s",
 				quote_ident(stagingName),
 				quote_ident(database.getDbConsumedName()),
-				quote_ident(userName));
+				quote_ident(this.getORDSDatabaseUser()));
 		this.runSQLStatementOnOrdsDB(clonedb);
-		//String sequenceName = "ords_constraint_seq";
-		//String createSequence = String.format("CREATE SEQUENCE %s",
-		//quote_ident(sequenceName));
-		//this.runSQLStatement(createSequence, stagingName, userName, password);
-		//String createSequence = "CREATE SEQUENCE ords_constraint_seq";
-		//String server = database.getDatabaseServer();
-		//this.runJDBCQuery(createSequence, null, server, stagingName);
 		
 		return stagingName;
 	}
@@ -291,34 +283,13 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 			databaseName = this.calculateStagingName(database.getDbConsumedName());
 		}
 		String statement = this.getTerminateStatement(databaseName);
-		this.runSQLQuery(statement, null, null, null);
+		this.runJDBCQuery(statement, null, database.getDatabaseServer(), databaseName);
 		statement = "rollback transaction; drop database " + databaseName + ";";
 		this.runSQLStatementOnOrdsDB(statement);
-	}
-
-	private void createOBDCUserRole(String username, String password)
-			throws Exception {
-
-		// check if role exists already
-		String sql = String.format("SELECT 1 FROM pg_roles WHERE rolname='%s'",
-				username);
-		@SuppressWarnings("rawtypes")
-		List r = this.runSQLQuery(sql, null, null, null);
-		if (r.size() == 0) {
-			// role doesn't exist
-			String command = String
-					.format("create role \"%s\" nosuperuser login createdb inherit nocreaterole password '%s' valid until '2045-01-01'",
-							username, password);
-			this.runSQLStatementOnOrdsDB(command);
-		}
 	}
 	
 	@Override
 	public OrdsPhysicalDatabase createNewDatabaseFromExisting (int origDbId, DatabaseRequest dto ) throws Exception {
-		
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		this.createOBDCUserRole(userName, password);
 
 		OrdsPhysicalDatabase templateDb = this.getDatabaseMetaData(origDbId);
 				
@@ -351,7 +322,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		//
 		if (this.checkDatabaseExists(newDatabaseName)) {
 			String statement = this.getTerminateStatement(newDatabaseName);
-			this.runSQLQuery(statement, null, null, null);
+			this.runJDBCQuery(statement, null, newDb.getDatabaseServer(), newDatabaseName);
 			statement = "rollback transaction; drop database " + newDatabaseName + ";";
 			this.runSQLStatementOnOrdsDB(statement);
 		}
@@ -360,10 +331,10 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		// Create clone
 		//
 		String clonedb = String.format(
-				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s OWNER = %s",
+				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s OWNER %s",
 				quote_ident(newDatabaseName),
 				quote_ident(templateName),
-				quote_ident(userName));
+				quote_ident(this.getORDSDatabaseUser()));
 		this.runSQLStatementOnOrdsDB(clonedb);
 
 		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(newDb.getLogicalDatabaseId());
@@ -374,10 +345,6 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 	@Override
 	public OrdsPhysicalDatabase createNewDatabase(DatabaseRequest databaseDTO) throws Exception {
 		log.debug("createEmptyDatabase");
-		
-		String userName = this.getODBCUserName();
-		String password = this.getODBCPassword();
-		this.createOBDCUserRole(userName, password);
 		
 		OrdsPhysicalDatabase db = new OrdsPhysicalDatabase();
 		db.setLogicalDatabaseId(databaseDTO.getGroupId());
@@ -398,14 +365,14 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		
 		String dbName = db.getDbConsumedName();
 		String statement = String.format(
-				"rollback transaction;create database %s owner = \"%s\";",
-				quote_ident(dbName), userName);
-
+				"rollback transaction;create database %s owner %s;",
+				quote_ident(dbName),
+				quote_ident(this.getORDSDatabaseUser()));
 		this.runSQLStatementOnOrdsDB(statement);
 		String createSequence = "CREATE SEQUENCE ords_constraint_seq";
 		String server = db.getDatabaseServer();
 		this.runJDBCQuery(createSequence, null, server, dbName);
-
+		
 		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(db.getLogicalDatabaseId());
 
 		return db;
