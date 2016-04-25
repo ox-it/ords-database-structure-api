@@ -54,6 +54,11 @@ public class StagingTest extends AbstractDatabaseTestRunner {
 		response = getClient().path("/"+physicalDatabaseId+"/staging").get();
 		assertEquals(200, response.getStatus());
 		
+		// Drop staging - unauth
+		logout();
+		assertEquals(403, getClient().path("/"+physicalDatabaseId+"/staging").delete().getStatus());
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
 		// Drop staging
 		response = getClient().path("/"+physicalDatabaseId+"/staging").delete();
 		assertEquals(200, response.getStatus());
@@ -66,6 +71,32 @@ public class StagingTest extends AbstractDatabaseTestRunner {
 		response = getClient().path("/"+physicalDatabaseId+"/").delete();
 		assertEquals(200, response.getStatus());
 		AbstractResourceTest.databaseIds.remove(logicalDatabaseId);
+		
+	}
+	
+	@Test
+	public void createStagingNoexistingVersion(){
+		
+		// Create a database
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		Response response = getClient().path("/").post(dbr);
+		assertEquals(201, response.getStatus());
+		
+		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
+		assertNotNull(db);
+		
+		// Strip the id from the end of the path
+		int physicalDatabaseId = db.getPhysicalDatabaseId();
+
+		// Drop staging
+		response = getClient().path("/"+physicalDatabaseId+"/staging").delete();
+		assertEquals(404, response.getStatus());
+
+		// Drop main
+		response = getClient().path("/"+physicalDatabaseId+"/").delete();
+		assertEquals(200, response.getStatus());
+		logout();
 		
 	}
 	

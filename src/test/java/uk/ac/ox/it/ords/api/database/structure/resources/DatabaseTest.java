@@ -88,15 +88,29 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		
 		OrdsPhysicalDatabase db = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
 		assertNotNull(db);
-		String dbId = Integer.toString(db.getPhysicalDatabaseId());
-		AbstractResourceTest.databaseIds.put(dbId, db.getEntityType().toString());
 		
 		// Strip the id from the end of the path
 		int dbID = db.getPhysicalDatabaseId();
 		
+		assertEquals(200, getClient().path("/"+dbID).get().getStatus());
+		
+		//
+		// Delete logged out
+		//
+		logout();
+		assertEquals(403, getClient().path("/"+dbID).delete().getStatus());
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		
+		//
+		// Delete no database
+		//
+		assertEquals(404, getClient().path("/999999").delete().getStatus());
+		
+		//
+		// Delete properly
+		//
 		response = getClient().path("/"+dbID).delete();
 		assertEquals(200, response.getStatus());
-		AbstractResourceTest.databaseIds.remove(dbId);
 		
 		logout();
 	}

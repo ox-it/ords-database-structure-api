@@ -69,7 +69,18 @@ public class TableTest extends AbstractDatabaseTestRunner{
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");		
 		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").post(null);
 		assertEquals(201, response.getStatus());
-		
+
+		//
+		// Try deleting it while logged out
+		// 
+		logout();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").delete();
+		assertEquals(403, response.getStatus());		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");		
+
+		//
+		// Now delete it
+		// 
 		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/false").delete();
 		assertEquals(200, response.getStatus());
 		
@@ -109,7 +120,11 @@ public class TableTest extends AbstractDatabaseTestRunner{
 	@Test
 	public void deleteNonexistantTable(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");		
-		Response response = getClient().path("/"+physicalDatabaseId+"/table/notable/false").delete();
+		
+		Response response = getClient().path("/99999/table/notable/false").delete();
+		assertEquals(404, response.getStatus());
+		
+		response = getClient().path("/"+physicalDatabaseId+"/table/notable/false").delete();
 		assertEquals(404, response.getStatus());
 		logout();
 	}

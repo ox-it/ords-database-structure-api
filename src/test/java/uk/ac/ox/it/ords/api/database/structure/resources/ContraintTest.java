@@ -219,6 +219,102 @@ public class ContraintTest extends AbstractDatabaseTestRunner{
 	}
 	
 	@Test
+	public void updateConstraint(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
+		
+		// Create a column
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		// Check column exists
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").get();
+		assertEquals(200, response.getStatus());
+
+		// Add a PK constraint
+		String[] columns = {"testColumn"};
+		ConstraintRequest constraint = this.buildConstraintRequest("pk", DatabaseTest.constraint_type.PRIMARY, columns, null, null);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/constraint/pk/false").post(constraint);
+		assertEquals(201, response.getStatus());
+		
+		// Get PK - note how ORDS adds a number on to ensure constraints are uniquely identified
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/constraint/pk_1/false").get();
+		assertEquals(200, response.getStatus());
+		
+		// Update PK
+		constraint.setNewname("primary_key");
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/constraint/pk_1/false").put(constraint);
+		assertEquals(200, response.getStatus());
+		
+		// Remove PK
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/constraint/primary_key/false").delete();
+		assertEquals(200, response.getStatus());
+		
+		logout();
+
+	}
+	
+	@Test
+	public void updateConstraintNonExisting(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+	
+		// Update PK
+		String[] columns = {"testColumn"};
+		ConstraintRequest constraint = this.buildConstraintRequest("pk", DatabaseTest.constraint_type.PRIMARY, columns, null, null);
+		Response response = getClient().path("/99999/table/testtable/constraint/pk_1/false").put(constraint);
+		assertEquals(404, response.getStatus());
+		
+		logout();
+	}
+	
+	@Test
+	public void updateConstraintUnauth(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
+		
+		// Create a column
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		// Check column exists
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").get();
+		assertEquals(200, response.getStatus());
+
+		// Add a PK constraint
+		String[] columns = {"testColumn"};
+		ConstraintRequest constraint = this.buildConstraintRequest("pk", DatabaseTest.constraint_type.PRIMARY, columns, null, null);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/constraint/pk/false").post(constraint);
+		assertEquals(201, response.getStatus());
+		
+		// Get PK - note how ORDS adds a number on to ensure constraints are uniquely identified
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/constraint/pk_1/false").get();
+		assertEquals(200, response.getStatus());
+		
+		// Update PK
+		logout();
+		loginUsingSSO("pinga@penguins.com","");
+		constraint.setNewname("primary_key");
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/constraint/pk_1/false").put(constraint);
+		assertEquals(403, response.getStatus());
+		logout();
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		// Remove PK
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/constraint/pk_1/false").delete();
+		assertEquals(200, response.getStatus());
+		
+		logout();
+
+	}
+	
+	@Test
 	public void deleteConstraint(){
 		
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
