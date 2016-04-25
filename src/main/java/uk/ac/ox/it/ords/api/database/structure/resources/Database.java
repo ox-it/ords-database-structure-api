@@ -938,6 +938,18 @@ public class Database extends AbstractResource{
 			return Response.status(400).build();	
 		}
 		
+		
+		//
+		// lets check if the column already exists
+		//
+		try {
+			ColumnRequest column = columnServiceInstance().getColumnMetadata(physicalDatabase, tableName, columnName, staging.getValue());
+			if (column != null) return Response.status(409).build();
+		}
+		catch ( Exception e ) {
+			// Ignore - this is probably a 404, which we want in this case
+		}
+		
 		try {
 			columnServiceInstance().createColumn(physicalDatabase, tableName, columnName, newColumn, staging.getValue());
 		    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
