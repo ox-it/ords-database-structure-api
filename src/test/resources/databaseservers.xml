@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+The database servers configured for project data. 
+ -->
+<servers>
+	<metadata host="localhost" port="5432" username="ords" password="ords" database="ordstest"/>
+	<server host="localhost" port="5432" username="ords" password="ords" database="ordstest"/>
+</servers>
