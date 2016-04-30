@@ -30,7 +30,6 @@ import java.util.Properties;
 import javax.sql.rowset.CachedRowSet;
 import javax.sql.rowset.RowSetProvider;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.lang.StringUtils;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -43,15 +42,11 @@ import uk.ac.ox.it.ords.api.database.structure.services.impl.AbstractStructureSe
 import uk.ac.ox.it.ords.api.database.structure.services.impl.hibernate.HibernateUtils;
 import uk.ac.ox.it.ords.api.database.structure.model.User;
 import uk.ac.ox.it.ords.api.database.structure.services.TableList;
-import uk.ac.ox.it.ords.security.configuration.MetaConfiguration;
+import uk.ac.ox.it.ords.security.model.DatabaseServer;
+import uk.ac.ox.it.ords.security.services.ServerConfigurationService;
 
 public class StructureServiceImpl extends AbstractStructureService {
 	Logger log = LoggerFactory.getLogger(StructureServiceImpl.class);
-	protected static String ODBC_MASTER_PASSWORD_PROPERTY = "ords.odbc.masterpassword";
-	protected static String ORDS_DATABASE_NAME = "ords.database.name";
-	protected static String ORDS_DATABASE_USER = "ords.database.user";
-	protected static String ORDS_DATABASE_PASSWORD = "ords.database.password";
-	protected static String ORDS_DATABASE_HOST = "ords.database.server.host";
 
 	private SessionFactory sessionFactory;
 
@@ -76,25 +71,8 @@ public class StructureServiceImpl extends AbstractStructureService {
 		return sessionFactory;
 	}
 	
-	public String getORDSDatabaseUser() throws ConfigurationException {
-		return MetaConfiguration.getConfiguration().getString(
-				StructureServiceImpl.ORDS_DATABASE_USER);
-	}
-	
-	public String getORDSDatabasePassword()  throws ConfigurationException {
-		return MetaConfiguration.getConfiguration().getString(
-				StructureServiceImpl.ORDS_DATABASE_PASSWORD);
-	}
-
-	public String getORDSDatabaseName() throws ConfigurationException {
-		return MetaConfiguration.getConfiguration().getString(
-				StructureServiceImpl.ORDS_DATABASE_NAME);
-	}
-	
-	
-	public String getORDSDatabaseHost()  throws ConfigurationException {
-		return MetaConfiguration.getConfiguration().getString(
-				StructureServiceImpl.ORDS_DATABASE_HOST);
+	public String getORDSDatabaseUser() throws Exception {
+		return ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getUsername();
 	}
 
 	public boolean checkDatabaseExists(String databaseName) throws Exception {
@@ -592,7 +570,8 @@ public class StructureServiceImpl extends AbstractStructureService {
 
 	private String[] getPostgresVersionArray() throws Exception {
 
-		CachedRowSet results = this.runJDBCQuery("SELECT version()", null, this.getORDSDatabaseHost(), this.getORDSDatabaseName());
+		DatabaseServer ordsDatabaseServer = ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer();
+		CachedRowSet results = this.runJDBCQuery("SELECT version()", null, ordsDatabaseServer.getHost(), ordsDatabaseServer.getMasterDatabaseName());
 		results.next();
 		String version = results.getString(1);
 
@@ -649,7 +628,7 @@ public class StructureServiceImpl extends AbstractStructureService {
 	}
 
 	protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,
-			String server, String databaseName, String userName, String password) throws Exception
+			String server, int port, String databaseName, String userName, String password) throws Exception
 	{
 		Connection connection = null;
 		Properties connectionProperties = new Properties();
@@ -658,8 +637,8 @@ public class StructureServiceImpl extends AbstractStructureService {
 		connectionProperties.put("user", userName);
 		connectionProperties.put("password", password);
 
-		String connectionURL = "jdbc:postgresql://" + server + "/"
-				+ databaseName;
+		String connectionURL = "jdbc:postgresql://" + server + ":" + port + "/" + databaseName;
+		
 		try {
 			connection = DriverManager.getConnection(connectionURL,
 					connectionProperties);
@@ -709,20 +688,34 @@ public class StructureServiceImpl extends AbstractStructureService {
 
 	};
 	
-	protected CachedRowSet runJDBCQuery(String query, List<Object> parameters,
-			String server, String databaseName) throws Exception {
-
-		String userName = this.getORDSDatabaseUser();
-		String password = this.getORDSDatabasePassword();
-
-		if ( server == null ) {
-			server = this.getORDSDatabaseHost();
+	protected CachedRowSet runJDBCQuery(
+			String query, 
+			List<Object> parameters,
+			String server, 
+			String databaseName
+			) throws Exception {
+		
+		String userName;
+		String password;
+		int port;
+		DatabaseServer databaseServer;
+		
+		if (server == null){
+			databaseServer = ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer();
+		} else {
+			databaseServer = ServerConfigurationService.Factory.getInstance().getDatabaseServer(server);
 		}
-		if (databaseName == null ) {
-			databaseName = this.getORDSDatabaseName();
+		
+		if (databaseName == null || databaseName.isEmpty()){
+			databaseName = databaseServer.getMasterDatabaseName();
 		}
-
-		return runJDBCQuery(query, parameters, server, databaseName, userName, password);
+		
+		server = databaseServer.getHost();
+		userName = databaseServer.getUsername();
+		password = databaseServer.getPassword();
+		port = databaseServer.getPort();
+		
+		return runJDBCQuery(query, parameters, server, port, databaseName, userName, password);
 
 	}
 
