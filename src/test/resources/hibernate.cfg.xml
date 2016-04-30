@@ -12,11 +12,8 @@
 -->
 <hibernate-configuration>
     <session-factory>
-        <property name="hibernate.connection.url">jdbc:postgresql://localhost/ordstest</property>
         <property name="hibernate.connection.driver_class">org.postgresql.Driver</property>
         <property name="dialect">org.hibernate.dialect.PostgreSQLDialect</property>
-        <property name="hibernate.connection.username">ords</property>
-        <property name="hibernate.connection.password">ords</property>
         <property name="transaction.factory_class">org.hibernate.transaction.JDBCTransactionFactory</property>
         <property name="current_session_context_class">thread</property>
         <property name="hibernate.show_sql">false</property>
