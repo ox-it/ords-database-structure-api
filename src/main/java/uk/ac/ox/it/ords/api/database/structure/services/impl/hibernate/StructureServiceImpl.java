@@ -96,8 +96,6 @@ public class StructureServiceImpl extends AbstractStructureService {
 	 * @param tableName the table
 	 * @param databaseName the database
 	 * @param databaseServer the database server
-	 * @param userName the user
-	 * @param password the user's password
 	 * @return true if the table exists
 	 * @throws Exception if there is a problem performing the check
 	 */
@@ -114,8 +112,6 @@ public class StructureServiceImpl extends AbstractStructureService {
 	 * @param tableName the table
 	 * @param databaseName the database
 	 * @param databaseServer the database server
-	 * @param userName the user
-	 * @param password the user's password
 	 * @return true if the column exists
 	 * @throws Exception if there is a problem performing the check
 	 */

@@ -70,7 +70,7 @@ public class Database extends AbstractResource{
 	 * required by the service. This is used to build the generic permissions that apply
 	 * to all database objects and allocate them to standard user roles.
 	 * 
-	 * @throws Exception
+	 * @throws Exception if there is a problem initialising the service
 	 */
 	@PostConstruct
 	public void init() throws Exception {
