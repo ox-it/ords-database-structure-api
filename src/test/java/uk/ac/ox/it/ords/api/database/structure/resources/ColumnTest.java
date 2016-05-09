@@ -85,6 +85,29 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 	}
 	
 	@Test
+	public void createDuplicateColumn(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
+		
+		// Create a column
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		// Check column exists
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").get();
+		assertEquals(200, response.getStatus());
+		
+		// Create same column again
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").post(column1);
+		assertEquals(409, response.getStatus());
+
+		logout();
+	}
+	
+	@Test
 	public void getColumnUnauth(){
 		
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
@@ -244,6 +267,16 @@ public class ColumnTest extends AbstractDatabaseTestRunner {
 		// Check column exists
 		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").get();
 		assertEquals(200, response.getStatus());
+		
+		// Delete when logged out
+		logout();
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").delete();
+		assertEquals(403, response.getStatus());		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		
+		// Deleete with wrong db id
+		response = getClient().path("/99999/table/testtable/column/testcol/false").delete();
+		assertEquals(404, response.getStatus());
 		
 		// Delete
 		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testcol/false").delete();

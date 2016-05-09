@@ -87,7 +87,28 @@ public class CommentTest extends AbstractDatabaseTestRunner{
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
 		Response response = getClient().path("/"+physicalDatabaseId+"/table/notable/comment/false").get();
 		assertEquals(404, response.getStatus());
+		
+		response = getClient().path("/9999/table/notable/comment/false").get();
+		assertEquals(404, response.getStatus());
 		logout();
+	}
+	
+	@Test
+	public void getTableCommentUnauth(){
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+		CommentRequest commentRequest = new CommentRequest();
+		commentRequest.setComment("Hello World");
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/comment/false").post(commentRequest);
+		assertEquals(201, response.getStatus());
+		
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/comment/false").get();
+		assertEquals(200, response.getStatus());
+		CommentRequest commentResponse = response.readEntity(CommentRequest.class);
+		assertEquals("Hello World", commentResponse.getComment());
+		logout();
+		
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/comment/false").get();
+		assertEquals(403, response.getStatus());		
 	}
 	
 	@Test
@@ -124,17 +145,61 @@ public class CommentTest extends AbstractDatabaseTestRunner{
 		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").get();
 		assertEquals(200, response.getStatus());
 		
+		// Create another column
+		ColumnRequest column2 = this.buildColumnRequest("testColumn2", "varchar", null, true, false);
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn2/false").post(column2);
+		assertEquals(201, response.getStatus());
+		
 		// Add comment
 		CommentRequest commentRequest = new CommentRequest();
 		commentRequest.setComment("Hello World");
 		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/comment/false").post(commentRequest);
 		assertEquals(201, response.getStatus());
 		
+		// get comment
 		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/comment/false").get();
 		assertEquals(200, response.getStatus());
 		CommentRequest commentResponse = response.readEntity(CommentRequest.class);
 		assertEquals("Hello World", commentResponse.getComment());
+		
+		// get comment - no DB
+		response = getClient().path("/9999/table/testtable/column/testColumn/comment/false").get();
+		assertEquals(404, response.getStatus());
+		
+		// get comment - no comment on column
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn2/comment/false").get();
+		assertEquals(200, response.getStatus());
+		commentResponse = response.readEntity(CommentRequest.class);
+		assertEquals(null, commentResponse.getComment());
 
+		logout();
+		
+		// get comment - logged out
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/comment/false").get();
+		assertEquals(403, response.getStatus());
+	}
+	
+	@Test
+	public void createColumnCommentUnauth(){
+		
+		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
+
+		// build a column
+		ColumnRequest column1 = this.buildColumnRequest("testColumn", "varchar", null, true, false);
+		
+		// Create a column
+		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/false").post(column1);
+		assertEquals(201, response.getStatus());
+		
+		// Add comment
+		logout();
+		loginUsingSSO("pinga@penguins.com","");
+
+		CommentRequest commentRequest = new CommentRequest();
+		commentRequest.setComment("Hello World");
+		response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/comment/false").post(commentRequest);
+		assertEquals(403, response.getStatus());
+		
 		logout();
 	}
 	
@@ -161,6 +226,9 @@ public class CommentTest extends AbstractDatabaseTestRunner{
 		CommentRequest commentRequest = new CommentRequest();
 		commentRequest.setComment("Hello World");
 		Response response = getClient().path("/"+physicalDatabaseId+"/table/testtable/column/testColumn/comment/false").post(commentRequest);
+		assertEquals(404, response.getStatus());
+		
+		response = getClient().path("/99999/table/testtable/column/testColumn/comment/false").post(commentRequest);
 		assertEquals(404, response.getStatus());
 
 		logout();

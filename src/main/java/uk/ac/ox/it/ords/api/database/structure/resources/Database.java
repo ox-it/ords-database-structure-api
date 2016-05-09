@@ -70,7 +70,7 @@ public class Database extends AbstractResource{
 	 * required by the service. This is used to build the generic permissions that apply
 	 * to all database objects and allocate them to standard user roles.
 	 * 
-	 * @throws Exception
+	 * @throws Exception if there is a problem initialising the service
 	 */
 	@PostConstruct
 	public void init() throws Exception {
@@ -936,6 +936,18 @@ public class Database extends AbstractResource{
 		
 		if (newColumn == null){
 			return Response.status(400).build();	
+		}
+		
+		
+		//
+		// lets check if the column already exists
+		//
+		try {
+			ColumnRequest column = columnServiceInstance().getColumnMetadata(physicalDatabase, tableName, columnName, staging.getValue());
+			if (column != null) return Response.status(409).build();
+		}
+		catch ( Exception e ) {
+			// Ignore - this is probably a 404, which we want in this case
 		}
 		
 		try {
