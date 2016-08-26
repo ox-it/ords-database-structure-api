@@ -75,10 +75,11 @@ public class StructureServiceImpl extends AbstractStructureService {
 		return ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getUsername();
 	}
 
-	public boolean checkDatabaseExists(String databaseName) throws Exception {
+	public boolean checkDatabaseExists(String databaseName, String databaseServer) throws Exception {
+		
 		String sql = "SELECT COUNT(*) as count from pg_database WHERE datname = ?";
 		List<Object> parameters = this.createParameterList(databaseName);
-		return this.runCountSql(sql, parameters,null, null) == 1;
+		return this.runCountSql(sql, parameters,null, databaseServer) == 1;
 		/*
 		 * Session session = this.getOrdsDBSessionFactory().getCurrentSession();
 		 * try { Transaction transaction = session.beginTransaction(); SQLQuery
