@@ -215,8 +215,9 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 				quote_ident(stagingName),
 				quote_ident(database.getDbConsumedName()),
 				quote_ident(this.getORDSDatabaseUser()));
-		this.runSQLStatementOnOrdsDB(clonedb);
 		
+		this.runJDBCQuery(clonedb, null, database.getDatabaseServer(), null);
+
 		return stagingName;
 	}
 
@@ -232,10 +233,12 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		}
 		String sql = "rollback transaction; drop database " + databaseName
 				+ ";";
-		this.runSQLStatementOnOrdsDB(sql);
+		this.runJDBCQuery(sql, null, database.getDatabaseServer(), null);
+
 		sql = String.format("ALTER DATABASE %s RENAME TO %s", stagingName,
 				databaseName);
-		this.runSQLStatementOnOrdsDB(sql);
+		this.runJDBCQuery(sql, null, database.getDatabaseServer(), null);
+
 
 	}
 	
@@ -258,11 +261,13 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		
 		String sql = "rollback transaction; drop database " + targetDatabaseName
 				+ ";";
-		this.runSQLStatementOnOrdsDB(sql);
+		this.runJDBCQuery(sql, null, source.getDatabaseServer(), null);
+
 		sql = String.format("ALTER DATABASE %s RENAME TO %s", 
 				quote_ident(sourceDatabaseName),
 				quote_ident(targetDatabaseName));
-		this.runSQLStatementOnOrdsDB(sql);
+		this.runJDBCQuery(sql, null, source.getDatabaseServer(), null);
+
 		
 		// now we need to find and remove the row from physical database
 		this.removeModelObject(source);
@@ -285,7 +290,8 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		String statement = this.getTerminateStatement(databaseName);
 		this.runJDBCQuery(statement, null, database.getDatabaseServer(), databaseName);
 		statement = "rollback transaction; drop database " + databaseName + ";";
-		this.runSQLStatementOnOrdsDB(statement);
+		this.runJDBCQuery(statement, null, database.getDatabaseServer(), null);
+
 	}
 	
 	@Override
@@ -324,7 +330,8 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 			String statement = this.getTerminateStatement(newDatabaseName);
 			this.runJDBCQuery(statement, null, newDb.getDatabaseServer(), newDatabaseName);
 			statement = "rollback transaction; drop database " + newDatabaseName + ";";
-			this.runSQLStatementOnOrdsDB(statement);
+			this.runJDBCQuery(statement, null, newDb.getDatabaseServer(), null);
+
 		}
 		
 		//
@@ -335,7 +342,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 				quote_ident(newDatabaseName),
 				quote_ident(templateName),
 				quote_ident(this.getORDSDatabaseUser()));
-		this.runSQLStatementOnOrdsDB(clonedb);
+		this.runJDBCQuery(clonedb, null, newDb.getDatabaseServer(), null);
 
 		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(newDb.getLogicalDatabaseId());
 		return newDb;

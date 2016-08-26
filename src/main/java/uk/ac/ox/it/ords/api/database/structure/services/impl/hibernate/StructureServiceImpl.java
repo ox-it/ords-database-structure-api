@@ -160,15 +160,6 @@ public class StructureServiceImpl extends AbstractStructureService {
 		return 0;
 
 	}
-	
-	protected void runSQLStatementOnOrdsDB(String statement) {
-		try {
-			this.runJDBCQuery(statement, null, null, null);
-		}
-		catch (Exception e) {
-			log.debug(e.getMessage());
-		}
-	}
 
 	protected void saveModelObject(Object objectToSave) throws Exception {
 		Session session = this.getOrdsDBSessionFactory().openSession();
