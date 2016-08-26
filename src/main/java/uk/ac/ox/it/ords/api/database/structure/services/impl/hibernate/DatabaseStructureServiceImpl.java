@@ -368,7 +368,9 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 				"rollback transaction;create database %s owner %s;",
 				quote_ident(dbName),
 				quote_ident(this.getORDSDatabaseUser()));
-		this.runSQLStatementOnOrdsDB(statement);
+				
+		this.runJDBCQuery(statement, null, databaseDTO.getDatabaseServer(), null);
+		
 		String createSequence = "CREATE SEQUENCE ords_constraint_seq";
 		String server = db.getDatabaseServer();
 		this.runJDBCQuery(createSequence, null, server, dbName);
