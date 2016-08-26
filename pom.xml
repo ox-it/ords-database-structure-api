@@ -3,7 +3,7 @@
   <groupId>uk.ac.ox.it.ords</groupId>
   <artifactId>ords-database-structure-api</artifactId>
   <packaging>war</packaging>
-  <version>0.0.4-SNAPSHOT</version>
+  <version>0.0.4</version>
   
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Project microservice for ORDS</description>
@@ -65,7 +65,7 @@
 		<url>https://github.com/ox-it/ords-database-structure-api</url>
 		<connection>scm:git:git://github.com/ox-it/ords-database-structure-api.git</connection>
 		<developerConnection>scm:git:git@github.com:ox-it/ords-database-structure-api.git</developerConnection>
-	  <tag>HEAD</tag>
+	  <tag>ords-database-structure-api-0.0.4</tag>
   </scm>
   
 	<reporting>
