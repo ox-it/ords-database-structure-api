@@ -301,7 +301,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		} else {
 			databaseName = this.calculateStagingName(database.getDbConsumedName());
 		}
-		String statement = this.getTerminateStatement(databaseName);
+		String statement = this.getTerminateStatement(databaseName, database.getDatabaseServer());
 		this.runJDBCQuery(statement, null, database.getDatabaseServer(), databaseName);
 		statement = "rollback transaction; drop database " + databaseName + ";";
 		this.runJDBCQuery(statement, null, database.getDatabaseServer(), null);
@@ -341,7 +341,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		// If this clone already exists, drop it.
 		//
 		if (this.checkDatabaseExists(newDatabaseName, newDb.getDatabaseServer())) {
-			String statement = this.getTerminateStatement(newDatabaseName);
+			String statement = this.getTerminateStatement(newDatabaseName, newDb.getDatabaseServer());
 			this.runJDBCQuery(statement, null, newDb.getDatabaseServer(), newDatabaseName);
 			statement = "rollback transaction; drop database " + newDatabaseName + ";";
 			this.runJDBCQuery(statement, null, newDb.getDatabaseServer(), null);

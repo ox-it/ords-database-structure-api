@@ -537,9 +537,9 @@ public class StructureServiceImpl extends AbstractStructureService {
 		}
 	}
 
-	protected String getTerminateStatement(String databaseName)
+	protected String getTerminateStatement(String databaseName, String server)
 			throws Exception {
-		boolean above9_2 = isPostgresVersionAbove9_2();
+		boolean above9_2 = isPostgresVersionAbove9_2(server);
 		String command;
 		if (above9_2) {
 			log.info("Postgres version is 9.2 or later");
@@ -556,10 +556,9 @@ public class StructureServiceImpl extends AbstractStructureService {
 
 	}
 
-	private String[] getPostgresVersionArray() throws Exception {
+	private String[] getPostgresVersionArray(String server) throws Exception {
 
-		DatabaseServer ordsDatabaseServer = ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer();
-		CachedRowSet results = this.runJDBCQuery("SELECT version()", null, ordsDatabaseServer.getHost(), ordsDatabaseServer.getMasterDatabaseName());
+		CachedRowSet results = this.runJDBCQuery("SELECT version()", null, server, null);
 		results.next();
 		String version = results.getString(1);
 
@@ -572,8 +571,8 @@ public class StructureServiceImpl extends AbstractStructureService {
 		return versionArray;
 	}
 
-	public boolean isPostgresVersionAbove9_2() throws Exception {
-		String[] versionArray = getPostgresVersionArray();
+	public boolean isPostgresVersionAbove9_2(String server) throws Exception {
+		String[] versionArray = getPostgresVersionArray(server);
 		boolean above = false;
 		if (versionArray != null) {
 			try {
