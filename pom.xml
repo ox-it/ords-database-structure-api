@@ -3,7 +3,7 @@
   <groupId>uk.ac.ox.it.ords</groupId>
   <artifactId>ords-database-structure-api</artifactId>
   <packaging>war</packaging>
-  <version>0.0.3-SNAPSHOT</version>
+  <version>0.0.7-SNAPSHOT</version>
   
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Project microservice for ORDS</description>
@@ -242,7 +242,7 @@
 		<dependency>
 			<groupId>uk.ac.ox.it.ords</groupId>
 			<artifactId>ords-security-common</artifactId>
-			<version>0.0.7</version>
+			<version>0.0.8</version>
 		</dependency>
 		<dependency>
 			<groupId>javax.servlet</groupId>

@@ -207,16 +207,31 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		OrdsPhysicalDatabase database = this.getDatabaseMetaData(dbId);
 		String stagingName = this.calculateStagingName(database
 				.getDbConsumedName());
-		if (this.checkDatabaseExists(stagingName)) {
-			this.deleteDatabase(dbId, true);
+		
+		//
+		// Try to delete staging database if it already exists
+		//
+		// If this fails, its most likely as someone else is accessing it, for
+		// example using the schema editor. This is probably going to cause an issue with
+		// concurrent editing of the schema.
+		//
+		if (this.checkDatabaseExists(stagingName, database.getDatabaseServer())) {
+			try {
+				this.deleteDatabase(dbId, true);
+			} catch (Exception e) {
+				log.warn("Failed to delete staging database; this is most likely due to concurrent editing");
+				log.debug(e.getMessage());
+				return stagingName;
+			}
 		}
 		String clonedb = String.format(
 				"ROLLBACK TRANSACTION; CREATE DATABASE %s WITH TEMPLATE %s OWNER = %s",
 				quote_ident(stagingName),
 				quote_ident(database.getDbConsumedName()),
 				quote_ident(this.getORDSDatabaseUser()));
-		this.runSQLStatementOnOrdsDB(clonedb);
 		
+		this.runJDBCQuery(clonedb, null, database.getDatabaseServer(), null);
+
 		return stagingName;
 	}
 
@@ -227,15 +242,17 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		String databaseName = database.getDbConsumedName();
 		String stagingName = this.calculateStagingName(databaseName);
 
-		if (!this.checkDatabaseExists(database.getDbConsumedName())) {
+		if (!this.checkDatabaseExists(database.getDbConsumedName(), database.getDatabaseServer())) {
 			throw new NotFoundException("Original database does not exist");
 		}
 		String sql = "rollback transaction; drop database " + databaseName
 				+ ";";
-		this.runSQLStatementOnOrdsDB(sql);
+		this.runJDBCQuery(sql, null, database.getDatabaseServer(), null);
+
 		sql = String.format("ALTER DATABASE %s RENAME TO %s", stagingName,
 				databaseName);
-		this.runSQLStatementOnOrdsDB(sql);
+		this.runJDBCQuery(sql, null, database.getDatabaseServer(), null);
+
 
 	}
 	
@@ -247,22 +264,24 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		
 		// check for source database
 		String sourceDatabaseName = source.getDbConsumedName();
-		if ( !this.checkDatabaseExists(sourceDatabaseName)) {
+		if ( !this.checkDatabaseExists(sourceDatabaseName, source.getDatabaseServer())) {
 			throw new NotFoundException("Source database does not exist");
 		}
 		// check for target database
 		String targetDatabaseName = target.getDbConsumedName();
-		if ( !this.checkDatabaseExists(targetDatabaseName)) {
+		if ( !this.checkDatabaseExists(targetDatabaseName, target.getDatabaseServer())) {
 			throw new NotFoundException("Target database does not exist");
 		}
 		
 		String sql = "rollback transaction; drop database " + targetDatabaseName
 				+ ";";
-		this.runSQLStatementOnOrdsDB(sql);
+		this.runJDBCQuery(sql, null, source.getDatabaseServer(), null);
+
 		sql = String.format("ALTER DATABASE %s RENAME TO %s", 
 				quote_ident(sourceDatabaseName),
 				quote_ident(targetDatabaseName));
-		this.runSQLStatementOnOrdsDB(sql);
+		this.runJDBCQuery(sql, null, source.getDatabaseServer(), null);
+
 		
 		// now we need to find and remove the row from physical database
 		this.removeModelObject(source);
@@ -282,10 +301,11 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		} else {
 			databaseName = this.calculateStagingName(database.getDbConsumedName());
 		}
-		String statement = this.getTerminateStatement(databaseName);
+		String statement = this.getTerminateStatement(databaseName, database.getDatabaseServer());
 		this.runJDBCQuery(statement, null, database.getDatabaseServer(), databaseName);
 		statement = "rollback transaction; drop database " + databaseName + ";";
-		this.runSQLStatementOnOrdsDB(statement);
+		this.runJDBCQuery(statement, null, database.getDatabaseServer(), null);
+
 	}
 	
 	@Override
@@ -320,11 +340,12 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		//
 		// If this clone already exists, drop it.
 		//
-		if (this.checkDatabaseExists(newDatabaseName)) {
-			String statement = this.getTerminateStatement(newDatabaseName);
+		if (this.checkDatabaseExists(newDatabaseName, newDb.getDatabaseServer())) {
+			String statement = this.getTerminateStatement(newDatabaseName, newDb.getDatabaseServer());
 			this.runJDBCQuery(statement, null, newDb.getDatabaseServer(), newDatabaseName);
 			statement = "rollback transaction; drop database " + newDatabaseName + ";";
-			this.runSQLStatementOnOrdsDB(statement);
+			this.runJDBCQuery(statement, null, newDb.getDatabaseServer(), null);
+
 		}
 		
 		//
@@ -335,7 +356,7 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 				quote_ident(newDatabaseName),
 				quote_ident(templateName),
 				quote_ident(this.getORDSDatabaseUser()));
-		this.runSQLStatementOnOrdsDB(clonedb);
+		this.runJDBCQuery(clonedb, null, newDb.getDatabaseServer(), null);
 
 		DatabaseStructureRoleService.Factory.getInstance().createInitialPermissions(newDb.getLogicalDatabaseId());
 		return newDb;
@@ -368,7 +389,9 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 				"rollback transaction;create database %s owner %s;",
 				quote_ident(dbName),
 				quote_ident(this.getORDSDatabaseUser()));
-		this.runSQLStatementOnOrdsDB(statement);
+				
+		this.runJDBCQuery(statement, null, databaseDTO.getDatabaseServer(), null);
+		
 		String createSequence = "CREATE SEQUENCE ords_constraint_seq";
 		String server = db.getDatabaseServer();
 		this.runJDBCQuery(createSequence, null, server, dbName);
@@ -426,10 +449,6 @@ public class DatabaseStructureServiceImpl extends StructureServiceImpl
 		if (staging){
 			databaseName = this.calculateStagingName(databaseName);
 		}
-		String query = "SELECT COUNT(*) as count from pg_database WHERE datname = ?";
-		List<Object> parameters = this.createParameterList(databaseName);
-		CachedRowSet result = this.runJDBCQuery(query, parameters, server, "postgres");
-		result.next();
-		return result.getInt(1) > 0;
+		return checkDatabaseExists(databaseName, server);
 	}
 }

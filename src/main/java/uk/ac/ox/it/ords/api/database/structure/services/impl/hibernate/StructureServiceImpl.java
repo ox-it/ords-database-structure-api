@@ -75,10 +75,11 @@ public class StructureServiceImpl extends AbstractStructureService {
 		return ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer().getUsername();
 	}
 
-	public boolean checkDatabaseExists(String databaseName) throws Exception {
+	public boolean checkDatabaseExists(String databaseName, String databaseServer) throws Exception {
+		
 		String sql = "SELECT COUNT(*) as count from pg_database WHERE datname = ?";
 		List<Object> parameters = this.createParameterList(databaseName);
-		return this.runCountSql(sql, parameters,null, null) == 1;
+		return this.runCountSql(sql, parameters,null, databaseServer) == 1;
 		/*
 		 * Session session = this.getOrdsDBSessionFactory().getCurrentSession();
 		 * try { Transaction transaction = session.beginTransaction(); SQLQuery
@@ -159,15 +160,6 @@ public class StructureServiceImpl extends AbstractStructureService {
 		}
 		return 0;
 
-	}
-	
-	protected void runSQLStatementOnOrdsDB(String statement) {
-		try {
-			this.runJDBCQuery(statement, null, null, null);
-		}
-		catch (Exception e) {
-			log.debug(e.getMessage());
-		}
 	}
 
 	protected void saveModelObject(Object objectToSave) throws Exception {
@@ -545,9 +537,9 @@ public class StructureServiceImpl extends AbstractStructureService {
 		}
 	}
 
-	protected String getTerminateStatement(String databaseName)
+	protected String getTerminateStatement(String databaseName, String server)
 			throws Exception {
-		boolean above9_2 = isPostgresVersionAbove9_2();
+		boolean above9_2 = isPostgresVersionAbove9_2(server);
 		String command;
 		if (above9_2) {
 			log.info("Postgres version is 9.2 or later");
@@ -564,10 +556,9 @@ public class StructureServiceImpl extends AbstractStructureService {
 
 	}
 
-	private String[] getPostgresVersionArray() throws Exception {
+	private String[] getPostgresVersionArray(String server) throws Exception {
 
-		DatabaseServer ordsDatabaseServer = ServerConfigurationService.Factory.getInstance().getOrdsDatabaseServer();
-		CachedRowSet results = this.runJDBCQuery("SELECT version()", null, ordsDatabaseServer.getHost(), ordsDatabaseServer.getMasterDatabaseName());
+		CachedRowSet results = this.runJDBCQuery("SELECT version()", null, server, null);
 		results.next();
 		String version = results.getString(1);
 
@@ -580,8 +571,8 @@ public class StructureServiceImpl extends AbstractStructureService {
 		return versionArray;
 	}
 
-	public boolean isPostgresVersionAbove9_2() throws Exception {
-		String[] versionArray = getPostgresVersionArray();
+	public boolean isPostgresVersionAbove9_2(String server) throws Exception {
+		String[] versionArray = getPostgresVersionArray(server);
 		boolean above = false;
 		if (versionArray != null) {
 			try {
