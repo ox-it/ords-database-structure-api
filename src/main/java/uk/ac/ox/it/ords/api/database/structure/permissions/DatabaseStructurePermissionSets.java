@@ -28,6 +28,7 @@ public class DatabaseStructurePermissionSets {
 	}
 	public static List<String> getPermissionsForUser(){
 		List<String> permissions = getPermissionsForAnonymous();
+		permissions.add(DatabaseStructurePermissions.DATABASE_CREATE);
 		return permissions;
 	}
 	public static List<String> getPermissionsForLocalUser(){

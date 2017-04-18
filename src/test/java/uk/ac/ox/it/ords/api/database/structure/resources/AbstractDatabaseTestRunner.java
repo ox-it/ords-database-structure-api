@@ -25,7 +25,7 @@ public class AbstractDatabaseTestRunner extends AbstractDatabaseTest {
 	
 	@BeforeClass
 	public static void setup(){
-		logicalDatabaseId = 99;
+		logicalDatabaseId = 199;
 	}
 	
 	@AfterClass
