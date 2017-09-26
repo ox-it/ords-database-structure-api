@@ -37,7 +37,7 @@ public class ContraintTest extends AbstractDatabaseTestRunner{
 	@Before
 	public void setupTable(){
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		

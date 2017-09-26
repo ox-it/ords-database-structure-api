@@ -35,7 +35,7 @@ public class StagingTest extends AbstractDatabaseTestRunner {
 		
 		// Create a database
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
@@ -79,7 +79,7 @@ public class StagingTest extends AbstractDatabaseTestRunner {
 		
 		// Create a database
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
@@ -120,7 +120,7 @@ public class StagingTest extends AbstractDatabaseTestRunner {
 	public void mergeStaging(){
 		// Create a database
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		

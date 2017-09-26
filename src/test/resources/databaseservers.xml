@@ -3,6 +3,6 @@
 The database servers configured for project data. 
  -->
 <servers>
-	<metadata host="localhost" port="5432" username="ords" password="ords" database="ordstest"/>
-	<server host="localhost" port="5432" username="ords" password="ords" database="ordstest"/>
+	<metadata alias="meta" host="localhost" port="5432" username="ords" password="ords" database="ordstest"/>
+	<server alias="test" host="localhost" port="5432" username="ords" password="ords" database="ordstest"/>
 </servers>

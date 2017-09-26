@@ -82,7 +82,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void createAndDeleteDatabase() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
@@ -118,7 +118,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void viewDatabaseUnauth() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
@@ -153,7 +153,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void stagingTest() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
@@ -182,7 +182,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void testTables() {
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
@@ -226,7 +226,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 	public void testIntegratedBuildTable() {
 
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 		
@@ -348,7 +348,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		// Create first database
 		
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		dbr.setInstance("MAIN");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
@@ -356,7 +356,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		OrdsPhysicalDatabase dbMain = (OrdsPhysicalDatabase)response.readEntity(OrdsPhysicalDatabase.class);
 		assertNotNull(dbMain);
 		
-		dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		dbr.setInstance("TEST");
 		response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
@@ -374,7 +374,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		//
 		// Rebuild Test 
 		//
-		dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		dbr.setInstance("TEST");
 		response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
@@ -438,7 +438,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 
 		// Create a database
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 
@@ -471,7 +471,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 	@Test
 	public void cloneDatabaseNonexisting() throws Exception{
 
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		dbr.setInstance("TEST");
 		Response response = getClient().path("/9999/").post(dbr);
 		assertEquals(404, response.getStatus());
@@ -482,7 +482,7 @@ public class DatabaseTest extends AbstractDatabaseTestRunner {
 		
 		// Create a database
 		loginUsingSSO("pingu@nowhere.co","pingu@nowhere.co");
-		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "localhost");
+		DatabaseRequest dbr = this.buildDatabaseRequest(null, logicalDatabaseId, "test");
 		Response response = getClient().path("/").post(dbr);
 		assertEquals(201, response.getStatus());
 
