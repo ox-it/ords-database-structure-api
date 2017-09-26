@@ -38,6 +38,7 @@ import uk.ac.ox.it.ords.api.database.structure.permissions.DatabaseStructurePerm
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureAuditService;
 import uk.ac.ox.it.ords.api.database.structure.services.DatabaseStructureService;
 import uk.ac.ox.it.ords.api.database.structure.services.StructureODBCService;
+import uk.ac.ox.it.ords.security.services.ServerConfigurationService;
 
 /**
  * API for requesting and revoking ODBC access
@@ -147,12 +148,16 @@ public class Odbc {
 			return Response.status(403).build();
 		}
 		
+		//
+		// Get the database server
+		//
+		String server = ServerConfigurationService.Factory.getInstance().getDatabaseServer(database.getDatabaseServer()).getHost();
 		
 		//
 		// We return the generated password. We could alternatively email it to the user.
 		//
 		OdbcResponse response = new OdbcResponse();
-		response.setServer(database.getDatabaseServer());
+		response.setServer(server);
 		response.setDatabase(databaseName);
 		response.setPassword(password);
 		response.setUsername(StructureODBCService.Factory.getInstance().getODBCUserName(databaseName));
